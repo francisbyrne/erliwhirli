@@ -79,8 +79,6 @@
         height: 100%;
         object-fit: cover;
         display: block;
-        /* opacity: 0.55; */
-        /* mix-blend-mode: luminosity; */
       }
 
       .cell input {
@@ -694,6 +692,19 @@
 
       function checkComplete() {
         if (puzzleDone) return;
+
+        // Sync any inp.value that may be ahead of gridValues (can happen on mobile)
+        Object.keys(inputAt).forEach((key) => {
+          const [r, c] = key.split(",").map(Number);
+          const inp = inputAt[key];
+          const displayed = inp.value
+            .replace(/[^a-zA-Z]/g, "")
+            .slice(-1)
+            .toUpperCase();
+          if (displayed && displayed !== getGridValue(r, c)) {
+            gridValues[key] = displayed;
+          }
+        });
 
         const allFilled = Object.keys(inputAt).every((key) => {
           const [r, c] = key.split(",").map(Number);
