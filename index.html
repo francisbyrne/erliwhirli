@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Erly Whirly Thirsdly Mini</title>
+    <link rel="icon" href="favicon.ico" />
     <link
       href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&display=swap"
       rel="stylesheet"
@@ -32,7 +33,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 40px 20px 20px;
+        padding: 40px 20px 60px;
       }
 
       header {
@@ -71,6 +72,15 @@
       }
       .cell.blocked {
         background: var(--ink);
+        overflow: hidden;
+      }
+      .cell.blocked img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        /* opacity: 0.55; */
+        /* mix-blend-mode: luminosity; */
       }
 
       .cell input {
@@ -460,6 +470,10 @@
 
           if (!OPEN[r][c]) {
             cell.classList.add("blocked");
+            const img = document.createElement("img");
+            img.src = "pugg.webp";
+            img.alt = "";
+            cell.appendChild(img);
             gridEl.appendChild(cell);
             continue;
           }
