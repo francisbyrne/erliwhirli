@@ -1,50 +1,871 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light dark" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Erly Whirly Thirsdly Mini</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&display=swap"
+      rel="stylesheet"
+    />
     <style>
-      input[type="text"] {
-        width: 12px;
-        font-size: large;
-        line-height: 12px;
-        padding-left: 4px;
-        padding-right: 4px;
-        padding-top: 1px;
-        padding-bottom: 1px;
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --ink: #1a1008;
+        --paper: #f7f2e8;
+        --accent: #b5451b;
+        --grid-line: #1a1008;
+        --blocked: #1a1008;
+        --highlight-word: #e8d9b0;
+        --highlight-active: #f0c040;
+        --cell-size: 58px;
+      }
+
+      body {
+        background: var(--paper);
+        color: var(--ink);
+        font-family: "Source Serif 4", Georgia, serif;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 40px 20px 60px;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 36px;
+      }
+
+      header h1 {
+        font-family: "Playfair Display", Georgia, serif;
+        font-size: 2.4rem;
+        letter-spacing: 0.12em;
+        color: var(--ink);
+        line-height: 1;
+      }
+
+      header .byline {
+        margin-top: 6px;
+        font-size: 0.78rem;
+        letter-spacing: 0.25em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      /* ── GRID ── */
+      .grid-wrapper {
+        border: 3px solid var(--grid-line);
+        display: inline-block;
+        line-height: 0;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(5, var(--cell-size));
+        grid-template-rows: repeat(5, var(--cell-size));
+        gap: 0;
+      }
+
+      .cell {
+        width: var(--cell-size);
+        height: var(--cell-size);
+        position: relative;
+        border: 1.5px solid var(--grid-line);
+      }
+
+      .cell.blocked {
+        background: var(--blocked);
+      }
+
+      .cell input {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+        background: transparent;
+        text-align: center;
+        font-family: "Playfair Display", Georgia, serif;
+        font-size: 1.55rem;
+        font-weight: 700;
+        color: var(--ink);
+        text-transform: uppercase;
+        outline: none;
+        caret-color: transparent;
+        cursor: default;
+        padding-top: 8px; /* nudge down to make room for clue number */
+        transition: background 0.1s;
+      }
+
+      .cell input.highlight-word {
+        background: var(--highlight-word);
+      }
+
+      .cell input.highlight-active {
+        background: var(--highlight-active);
+      }
+
+      .cell .num {
+        position: absolute;
+        top: 3px;
+        left: 4px;
+        font-family: "Source Serif 4", serif;
+        font-size: 0.6rem;
+        font-weight: 400;
+        color: var(--ink);
+        pointer-events: none;
+        z-index: 2;
+        line-height: 1;
+      }
+
+      /* ── CLUES ── */
+      .clues-section {
+        margin-top: 32px;
+        width: 100%;
+        max-width: 310px;
+        border-top: 2px solid var(--ink);
+        padding-top: 20px;
+      }
+
+      .clues-cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+
+      .clue-group h2 {
+        font-family: "Playfair Display", Georgia, serif;
+        font-size: 0.95rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        color: var(--accent);
+        border-bottom: 1px solid #c9b99a;
+        padding-bottom: 4px;
+      }
+
+      .clue-group ul {
+        list-style: none;
+      }
+
+      .clue-group ul li {
+        font-size: 0.82rem;
+        line-height: 1.5;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: color 0.15s;
+      }
+
+      .clue-group ul li .cn {
+        font-family: "Playfair Display", serif;
+        font-weight: 700;
+        margin-right: 4px;
+        color: var(--accent);
+      }
+
+      .clue-group ul li:hover {
+        color: var(--accent);
+      }
+
+      .clue-group ul li.active {
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      /* ── SUCCESS BANNER ── */
+      .success {
+        display: none;
+        margin-top: 24px;
+        font-family: "Playfair Display", serif;
+        font-size: 1.1rem;
+        color: var(--accent);
+        letter-spacing: 0.08em;
+        text-align: center;
+        animation: pop 0.3s ease;
+      }
+      .success.show {
+        display: block;
+      }
+      @keyframes pop {
+        0% {
+          transform: scale(0.8);
+          opacity: 0;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
       }
     </style>
-    <title>Erli Whirli's Thirsdly Mini</title>
   </head>
   <body>
-    <main class="container">
-      <form>
-        <div class="grid">
-          <div class="section">
-            <input type="text" name="1" required maxlength="1" />
-            <input type="text" name="2" required maxlength="1" />
-            <input type="text" name="3" required maxlength="1" />
-            <input type="text" name="4" required maxlength="1" />
-            <input type="text" name="5" required maxlength="1" />
-          </div>
-          <div class="section">
-            <input type="text" name="6" required maxlength="1" />
-            <input type="text" name="7" required maxlength="1" />
-            <input type="text" name="8" required maxlength="1" />
-            <input type="text" name="9" required maxlength="1" />
-            <input type="text" name="10" required maxlength="1" />
-          </div>
+    <header>
+      <h1>Erly Whirly Thirsdly Mini</h1>
+    </header>
 
-          <div class="section">
-            <input type="text" name="11" required maxlength="1" />
-            <input type="text" name="12" required maxlength="1" />
-            <input type="text" name="13" required maxlength="1" />
-            <input type="text" name="14" required maxlength="1" />
-            <input type="text" name="15" required maxlength="1" />
-          </div>
+    <div class="grid-wrapper">
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="clues-section">
+      <div class="clues-cols">
+        <div class="clue-group">
+          <h2>Across</h2>
+          <ul id="clues-across"></ul>
         </div>
-      </form>
-    </main>
+        <div class="clue-group">
+          <h2>Down</h2>
+          <ul id="clues-down"></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="success" id="success">✦ Well done! ✦</div>
+
+    <script>
+      // ─────────────────────────────────────────────────────────────────
+      //  PUZZLE DEFINITION
+      //
+      //  Grid layout (5×5):
+      //
+      //       c0    c1    c2    c3    c4
+      //  r0 [ 1A    1A    1A    1A    1A ]   ← 1-Across (all 5 cols, row 0)
+      //  r1 [  ■     ■    2A    2A    2A ]   ← 2-Across (c2–c4 can't start at c0
+      //  r2 [ 1D    ■    2D    ■    3D ]     —— wait, let me plan carefully
+      //
+      //  Constraints:
+      //   1-Across: row 0, cols 0–4  (5 letters)
+      //   1-Down:   col 0, rows 0–4  (starts at 1A letter 1 = r0,c0)
+      //   2-Down:   col 2, rows 0–4  (starts at 1A letter 3 = r0,c2)
+      //   3-Down:   col 4, rows 0–4  (starts at 1A letter 5 = r0,c4)
+      //
+      //  For 2-Across and 3-Across we need 5-letter rows that each
+      //  pass through at least one of c0,c2,c4 (so they intersect a Down).
+      //
+      //  A clean choice:
+      //   2-Across: row 2, cols 0–4  (intersects 1D@c0, 2D@c2, 3D@c4)
+      //   3-Across: row 4, cols 0–4  (intersects 1D@c0, 2D@c2, 3D@c4)
+      //
+      //  So the open cells form a "hash" pattern:
+      //   Row 0: all open
+      //   Row 2: all open
+      //   Row 4: all open
+      //   Col 0: rows 0,2,4 open (and 1,3 are blocked unless another word uses them)
+      //   Col 2: rows 0,2,4 open
+      //   Col 4: rows 0,2,4 open
+      //
+      //  Blocked cells: everything else.
+      //   r1,c1 r1,c3 → blocked; r1,c0 r1,c2 r1,c4 → part of down words (open)
+      //   r3,c0 r3,c2 r3,c4 → open; r3,c1 r3,c3 → blocked
+      //
+      //  Full open map:
+      //   (0,0)(0,1)(0,2)(0,3)(0,4)
+      //   (1,0)     (1,2)     (1,4)
+      //   (2,0)(2,1)(2,2)(2,3)(2,4)
+      //   (3,0)     (3,2)     (3,4)
+      //   (4,0)(4,1)(4,2)(4,3)(4,4)
+      //
+      //  Words that fit this grid (answers must be real words):
+      //   1-Across (r0): FRAME  →  F R A M E
+      //   2-Across (r2): BLOWN  →  B L O W N
+      //   3-Across (r4): GLADE  →  G L A D E
+      //
+      //   1-Down (c0): FRANK → wait c0 letters are: F(r0) ?(r1) B(r2) ?(r3) G(r4)
+      //     = F _ B _ G  — hard to make a word. Let me pick different across answers.
+      //
+      //  Let me choose answers that produce valid crossing down words:
+      //
+      //   Label c0 letters as (a _ b _ c), c2 as (d _ e _ f), c4 as (g _ h _ i)
+      //   where row0=1A, row2=2A, row4=3A and the blanks are free (rows 1,3).
+      //
+      //   I'll pick the across answers to make the down words work:
+      //
+      //   1-Across: STORM  s t o r m
+      //   2-Across: SPINE  s p i n e
+      //   3-Across: ELATE  e l a t e
+      //
+      //   1-Down col0: S _ S _ E = SASSE? no.  Let's try:
+      //
+      //   1-Across: OLIVE  o l i v e
+      //   2-Across: ABODE  a b o d e
+      //   3-Across: KNELT  k n e l t
+      //
+      //   1-Down col0: O _ A _ K = OAKEN? no, O?A?K
+      //   2-Down col2: I _ O _ E = IRONE? IDOLE?
+      //   3-Down col4: E _ E _ T = EVENT! E_E_T rows 1,3 free → E V E N T ✓
+      //
+      //  Let me approach this differently: pick the three down words first,
+      //  derive the across letters from intersections, fill freely.
+      //
+      //   1-Down (c0, rows 0–4, free at r1,r3): ATONE  A T O N E
+      //   2-Down (c2, rows 0–4, free at r1,r3): RIVER  R I V E R
+      //   3-Down (c4, rows 0–4, free at r1,r3): MENDS  M E N D S
+      //
+      //   1-Across row0 letters: c0=A c1=? c2=R c3=? c4=M → A_R_M → ALARM? A L R? no.
+      //     → A?R?M → ABRAM (name)... ALARM is A L A R M ✓  c1=L c3=R... wait ALARM=A,L,A,R,M
+      //     c0=A c1=L c2=A... but 2-Down starts with R at c2. Conflict.
+      //
+      //   Let me try:
+      //   1-Down:  SUPER  S U P E R
+      //   2-Down:  ATLAS  A T L A S
+      //   3-Down:  TONIC  T O N I C
+      //
+      //   r0: c0=S c2=A c4=T  → S?A?T → SLANT ✓  (S L A N T)
+      //   r2: c0=P c2=L c4=N  → P?L?N → PLAIN? P L A I N ✓  (but c2=L matches ✓, c4=N ✓)
+      //     Wait PLAIN: P,L,A,I,N → c0=P✓ c1=L c2=A... but 2-Down c2 letter at r2 = L. Conflict (ATLAS r2 = L ✓ actually).
+      //     ATLAS: A(r0) T(r1) L(r2) A(r3) S(r4) → r2,c2 = L
+      //     PLAIN: c2 position = A ≠ L. Conflict.
+      //   Try PLONK: P L O N K → c2=O, but ATLAS r2=L. No.
+      //   PLOTS: P L O T S → c2=O ≠ L. No.
+      //   FLESH: no. PLUMB: c2=U≠L.
+      //   How about keeping c2 letter at r2 = L:
+      //   2-Across (r2): _?L?_ where c0=P, c2=L, c4=N → P_L_N → PYLON ✓ (P Y L O N, c4=N ✓)
+      //
+      //   r4: c0=R c2=S c4=C → R?S?C → RUSTIC? R U S T I C is 6. RUSE? 4. R_S_C: RUSE+C?
+      //     Hmm. Let me try SONIC (S O N I C) for 3-Down giving c4 at r4=C.
+      //     Or pick 3-Down = TOPIC: T O P I C → r4,c4=C same issue.
+      //   Let's change 3-Down:
+      //   3-Down: SPINE  S P I N E → r0=S r2=I r4=E
+      //   r0: c0=S c2=A c4=S → S?A?S → SWANS? S W A N S ✓
+      //   r2: c0=P c2=L c4=I → P_L_I → PLAID? P L A I D, c4=D≠I. PLURI? PLAIN c4=N≠I.
+      //     PILAF? no. Hmm c0=P c2=L c4=I: P_L_I → PELVI? PULPIT is 6.
+      //   This is getting complex. Let me just try a known interlocking set:
+      //
+      //   FINAL ANSWER — I'll use words I know intersect cleanly:
+      //
+      //   1-Across (r0):     BLAND   B L A N D  -- wait only if we pick c4=D for 3-down
+      //   Actually let me just enumerate and match:
+      //
+      //   Pick across words first, rows 0,2,4 all cols:
+      //   1A = CRANE  C R A N E
+      //   2A = ?      must have c0,c2,c4 = C_,A_,E_ (from downs)
+      //              and be a word. e.g. c0 is down-1's r2 letter, etc.
+      //
+      //   I'll try: 1A=CRANE, 2A=CLOUD, 3A=EVENT
+      //   1D(c0): C_C_E → no obvious word
+      //
+      //   OK — final pragmatic approach. I'll pick the 6 intersecting letters
+      //   to spell valid 5-letter down words, then fill the remaining 6 across
+      //   non-intersecting positions freely to make valid across words.
+      //
+      //   Intersecting positions: (row,col) with row∈{0,2,4} and col∈{0,2,4}
+      //   These 9 positions are shared. The 6 non-intersecting across positions
+      //   per row are cols 1 and 3.
+      //
+      //   Let me pick 3 valid down words for c0,c2,c4:
+      //   1-Down(c0): BRISK  B(r0) R(r1) I(r2) S(r3) K(r4)
+      //   2-Down(c2): ANGEL  A(r0) N(r1) G(r2) E(r3) L(r4)
+      //   3-Down(c4): STUMP  S(r0) T(r1) U(r2) M(r3) P(r4)
+      //
+      //   Now across rows, using fixed letters at c0,c2,c4:
+      //   1-Across(r0): B?A?S → BANDS ✓  (B A N D S)  c1=A c3=D
+      //   2-Across(r2): I?G?U → IGLOO? I G L O O c2=L≠G. Hmm.
+      //     I_G_U: INGUE? not a word. Let me try:
+      //   2-Down(c2): AGENT  A(r0)G(r1)E(r2)N(r3)T(r4)
+      //   2-Across(r2): I?E?U → IHEAU? Hmm.
+      //   2-Down(c2): OCCUR  no starts with O.
+      //
+      //   Let me just pick the across words and derive downs:
+      //   1A: BANGS  B A N G S
+      //   2A: THOSE  T H O S E
+      //   3A: DULLY  D U L L Y
+      //   1D(c0): B_T_D = BATHED? 6 letters. B T... no. B,?,T,?,D — BOTID? no.
+      //
+      //   FINAL final attempt — I'll use a real mini crossword I know works:
+      //
+      //   1-Across: SPINE  S P I N E
+      //   2-Across: ALTAR  A L T A R
+      //   3-Across: VERSO  V E R S O
+      //
+      //   1-Down(c0): S_A_V = SLAVE? S,?,A,?,V → SLAVEV? No: SHAVE= S H A V E but c2=I not A.
+      //   c0 col: r0=S r2=A r4=V  fill r1,r3 freely → S?A?V: SCALY? no. STAVE= S T A V E ✓ r1=T r3=E... but r3,c0 is open, r4,c0=V and STAVE ends in E not V.
+      //   Rethink: 1-Down col0 = S(r0) ?(r1) A(r2) ?(r3) V(r4)
+      //   = S_A_V: SLAVS? SLAV is 4. How about SHAWL? S H A W L — ends in L not V.
+      //   SCARV? not a word.
+      //   Let me swap 3-Across to start with different letter at c0.
+      //
+      //   I'll use a known valid crossword grid from scratch:
+      //
+      //   1A: FLINT  F L I N T
+      //   2A: EASEL  E A S E L
+      //   3A: DROVE  D R O V E
+      //   1D(c0): F_E_D = FEED? F,?,E,?,D → FADED: F A E... hmm FAKED? F,A,K,E,D but c2=I≠K
+      //   c0: F(r0) ?(r1) E(r2) ?(r3) D(r4)  → FREED? F R E E D ✓  r1=R r3=E
+      //   c2: I(r0) ?(r1) S(r2) ?(r3) O(r4)  → IMSOO? VERSO starts wrong. I_S_O:
+      //     BISON? B,I,S,O,N — c2=I✓ wait BISON is 5, c2 col letters = I(r0),?(r1),S(r2),?(r3),O(r4)
+      //     That means r0,c2=I, but in BISON the I is at position 1 (0-indexed). We need a word where:
+      //     pos0=I, pos2=S, pos4=O → I_S_O: INSPO? not standard. ISSO?
+      //     How about DISCO: D I S C O — that's pos0=D≠I.
+      //     ISO words... RUSSO? no.
+      //     Hmm: pos0=I pos2=S pos4=O → I?S?O: "IPSO" is 4. ISSO?
+      //
+      //  ─── I'll just hardcode a clean working puzzle and move on. ───
+      //
+      //  WORKING PUZZLE:
+      //   1-Across: CHEST   C H E S T   (row 0)
+      //   2-Across: ALBUM   A L B U M   (row 2)
+      //   3-Across: FORGE   F O R G E   (row 4)
+      //
+      //   c0 col: C(r0) ?(r1) A(r2) ?(r3) F(r4) → C_A_F → CRAFT? C,R,A,F,T — no,pos3=F,pos4=T, but c0 col pos4=F.
+      //   CLAMP? C,L,A,M,P pos4=P≠F. CHAFF? C,H,A,F,F r1=H r3=F ✓! CHAFF ✓
+      //   c2 col: E(r0) ?(r1) B(r2) ?(r3) R(r4) → E_B_R → ELBOW? E,L,B,O,W pos4=W≠R. EMBER? E,M,B,E,R ✓  r1=M r3=E ✓
+      //   c4 col: T(r0) ?(r1) M(r2) ?(r3) E(r4) → T_M_E → THEME? T,H,E,M,E — pos2=E≠M. TAMED: T,A,M,E,D pos4=D≠E. TAMOE? TIME is 4. T_M_E: TIMSE? TUMSE?
+      //   Hmm THYME: T,H,Y,M,E ✓ r1=H r3=M... wait r3,c4=M but also 3-Across(r4,c4)=E and THYME pos4=E ✓. THYME works!  r1=H r3=M ✓
+      //
+      //   FINAL FINAL FINAL:
+      //   1-Across (r0): CHEST    clue: "Treasure container"
+      //   2-Across (r2): ALBUM    clue: "Photo collection"
+      //   3-Across (r4): FORGE    clue: "Blacksmith's workshop"
+      //
+      //   1-Down   (c0): CHAFF    clue: "Worthless husks"       — C(r0)H(r1)A(r2)F(r3)F(r4) — but r4,c0=F and 3-Across starts F ✓
+      //   2-Down   (c2): EMBER    clue: "Glowing coal fragment"  — E(r0)M(r1)B(r2)E(r3)R(r4) — r4,c2=R and FORGE[2]=R ✓
+      //   3-Down   (c4): THYME    clue: "Aromatic herb"          — T(r0)H(r1)M(r2)?... wait THYME=T,H,Y,M,E pos2=Y not M.
+      //
+      //   ALBUM[4]=M so r2,c4=M. THYME pos2=Y≠M. So c4 col at r2 must =M.
+      //   Need a 5-letter word: pos0=T pos2=M pos4=E → T_M_E: TAME is 4. TIMBRE is 6.
+      //   "THEME"? T H E M E: pos2=E≠M.
+      //   What if I change 2-Across?
+      //   2-Across: ALBUS → not a word.
+      //   What if c4 of 2-Across ≠ M?
+      //   2-Across: PLUMB  P,L,U,M,B → c4=B
+      //   3-Across: ?????  must start with F (c0=F from CHAFF), have R at c2 (from EMBER), and B at c4 (from PLUMB r2,c4=B... but r4,c4 is 3A's last letter, not r2,c4. Let me recheck.
+      //
+      //   OK: c4 Down word letters: r0,c4=1A[4]; r2,c4=2A[4]; r4,c4=3A[4].
+      //   With 2-Across=PLUMB: r2,c4=B → 3-Down col4: T(r0) ? B ? [3A_last]
+      //   3-Across FORGE: last=E → col4: T ? B ? E → T_B_E: TABLE? T,A,B,L,E ✓ r1=A r3=L ✓ TABLE!
+      //
+      //   CHECK ALL INTERSECTIONS:
+      //   1A=CHEST: r0= C H E S T
+      //   2A=PLUMB: r2= P L U M B
+      //   3A=FORGE: r4= F O R G E
+      //   1D(c0): C(r0)?(r1)P(r2)?(r3)F(r4) → C_P_F: COMFY? C,O,M,F,Y ≠. Hmm.
+      //   C_P_F is tough. CUPID? C,U,P,I,D pos4≠F.
+      //
+      //   Let me try 3-Across starting with different letter so c0 col is easier.
+      //
+      //   What if:
+      //   1A: WINDY  W I N D Y
+      //   2A: ELBOW  E L B O W
+      //   3A: AGAVE  A G A V E
+      //   1D(c0): W?E?A → WHEAT? W,H,E,A,T pos4=T≠A. WOKEN? no. W_E_A: OMEGA? no starts W.
+      //   Hmm.
+      //
+      //   ABSOLUTE FINAL — I'm picking known intersecting words:
+      //
+      //   1A: BLAND  B L A N D
+      //   2A: OPERA  O P E R A
+      //   3A: SWEAT  S W E A T
+      //   1D(c0): B?O?S → BOOKS? B,O,O,K,S pos2=O✓ pos4=S✓ BOONS: B,O,O,N,S ✓ r1=O r3=N ✓ BOONS!
+      //   2D(c2): A?E?E → A_E_E: AGAVE? A,G,A,V,E pos2=A≠E. AMEND? pos4≠E(=D).
+      //     A(r0)?(r1)E(r2)?(r3)E(r4): AGREE? A,G,R,E,E ✓ r1=G r3=E? AGREE=A,G,R,E,E pos3=E ✓ ✓ AGREE!
+      //   3D(c4): D?A?T → DRAFT? D,R,A,F,T pos2=A✓ pos4=T✓ DRAFT: r1=R r3=F ✓ DRAFT!
+      //
+      //   VERIFY:
+      //   r0: B  L  A  N  D   = BLAND ✓
+      //   r1: O(1D) G(2D) R(3D) → r1,c0=O r1,c2=G r1,c4=R
+      //   r2: O  P  E  R  A   = OPERA ✓ (c0=O✓ c2=E✓ c4=A✓)... wait OPERA[0]=O✓ OPERA[2]=E✓ OPERA[4]=A✓ ✓
+      //   r3: N(1D) E(2D) F(3D) → r3,c0=N r3,c2=E r3,c4=F
+      //   r4: S  W  E  A  T   = SWEAT ✓ (c0=S✓ c2=E✓ c4=T✓)... SWEAT[0]=S✓ SWEAT[2]=E✓ SWEAT[4]=T✓ ✓
+      //
+      //   1D(c0): B O O N S = BOONS ✓ (r0=B r1=O r2=O r3=N r4=S) — but r2,c0 should = O (OPERA[0]=O) ✓ r4,c0=S (SWEAT[0]=S) ✓
+      //   2D(c2): A G E E E? wait AGREE = A,G,R,E,E → pos2=R, but r2,c2=E(from OPERA). AGREE[2]=R≠E. CONFLICT.
+      //
+      //   Ugh. AGREE pos2 = R but we need pos2 = E. Let me pick different 2D.
+      //   c2 col: A(r0)?(r1)E(r2)?(r3)E(r4) — A_E_E:
+      //   ADHERE is 6. ABOVE? A,B,O,V,E pos2=O≠E. AFIRE? A,F,I,R,E pos4=E✓ pos2=I≠E.
+      //   ALEE is 4. AMUSE? pos2=U≠E.
+      //   Hmm all 5-letter words A__E__E... AGLEE? not standard. ANODE? pos4=E✓ pos2=O≠E.
+      //   What if I change 2A so c2≠E?
+      //
+      //   2A: ULTRA  U L T R A  → c2=T
+      //   c2 col: A(r0)?(r1)T(r2)?(r3)E(r4) → A_T_E: ABIDE? A,B,I,D,E pos2=I≠T. AZTEC? pos4≠E.
+      //   AFIRE? A,F,I,R,E pos2=I≠T. ATONE? A,T,O,N,E ✓ ✓ r1=T r3=N ATONE!  pos0=A✓ pos2=O... wait ATONE=A,T,O,N,E pos2=O≠T.
+      //   A_T_E: ARTIE? not standard. AFTER? A,F,T,E,R pos4=R≠E. ACTED? A,C,T,E,D pos4=D≠E.
+      //   Hmm. ATTIC? pos4=C≠E. ACUTE? A,C,U,T,E pos2=U≠T.
+      //   ANTE is 4. A_T_E 5-letter: ALTER! A,L,T,E,R pos4=R≠E.
+      //   APTLY? pos2=T✓ pos4=Y≠E.
+      //   AITCH? 5 letters A,I,T,C,H pos4=H≠E.
+      //   Hmm this is really hard. What about ARTSE? not a word.
+      //   ADZE? 4. EATEN? E,A,T,E,N pos0=E≠A.
+      //
+      //   I need a 5-letter word: _A_ _ T _ _ E where positions 0,2,4 = A,T,E.
+      //   That's: pos0=A pos2=T pos4=E → A?T?E: AFTER:A,F,T,E,R no. ALTAR: pos2=T✓ pos4=R≠E.
+      //   ANTE? 4. ARTIE? ARTZE?
+      //   Wait: A(pos0) ?(pos1) T(pos2) ?(pos3) E(pos4): AATEE? ANTEE? not words.
+      //   Real words: ABATE: A,B,A,T,E → pos2=A≠T.
+      //   ASIDE: A,S,I,D,E pos2=I≠T. ADORE: pos2=O≠T.
+      //   Hmm genuinely hard constraint. Let me change 3A.
+      //
+      //   OK. I think the cleanest path forward: change 3A to end in something other than T,
+      //   so 3D(c4) is flexible.
+      //
+      //   Let me try a completely fresh set:
+      //   1A: PLANT  P L A N T
+      //   2A: CHOIR  C H O I R
+      //   3A: SWORD  S W O R D
+      //
+      //   1D(c0): P?C?S → PACKS? P,A,C,K,S pos2=C✓ pos4=S✓ r1=A r3=K — PACKS!
+      //   2D(c2): A?O?O → A_O_O: AFOOT? A,F,O,O,T pos4=T≠O. Hmm.
+      //     Actually pos of 2D: r0=A(1A[2]), r2=O(2A[2]), r4=O(3A[2]) → A?O?O:
+      //     ABODE? A,B,O,D,E pos2=O✓ pos4=E≠O. ALOOF? A,L,O,O,F ✓ ✓ ALOOF! r1=L r3=O ✓
+      //   3D(c4): T?R?D → T_R_D: THIRD? T,H,I,R,D ✓ ✓ r1=H r3=I — THIRD!
+      //
+      //   VERIFY ALL:
+      //   r0(1A): P  L  A  N  T  = PLANT ✓
+      //   r1:     A(1D,c0=A) ?(c1) L(2D,c2=L) ?(c3) H(3D,c4=H) — r1: A ? L ? H
+      //   r2(2A): C  H  O  I  R  = CHOIR ✓ — c0=C,c2=O,c4=R
+      //     but 1D(c0) at r2 should =C (pos2 of PACKS=C ✓)
+      //     2D(c2) at r2 should =O (ALOOF pos2=O ✓)
+      //     3D(c4) at r2 should =R (THIRD pos2=I)... THIRD=T,H,I,R,D pos2=I≠R. CONFLICT.
+      //
+      //   3A[4]=R=r4,c4=D? No, 3A=SWORD: S,W,O,R,D so c4=D. 3D(c4): T(r0)?R(r2 should be 3D pos2)...
+      //   Wait: 3D col4 = r0,c4=T; r1,c4=?; r2,c4=R; r3,c4=?; r4,c4=D (from SWORD[4]=D)
+      //   So 3D = T _ R _ D: THIRD=T,H,I,R,D pos0=T✓ pos2=I≠R(pos2 should be R). THIRD[2]=I but we need pos2=R. CONFLICT.
+      //   A 5-letter word T_R_D: TRIAD? T,R,I,A,D pos0=T✓ pos1=R≠? pos2=I≠R.
+      //   Need pos0=T pos2=R pos4=D: T?R?D → TREAD? T,R,E,A,D pos0=T✓ pos1=R≠? pos2=E≠R. Hmm.
+      //   T_R_D where pos0=T,pos2=R,pos4=D: T(?)R(?)D → TURFD? TYPED? T,Y,P,E,D pos2=P≠R.
+      //   TARDY? T,A,R,D,Y pos2=R✓ pos4=Y≠D. TURD? 4 letters.
+      //   THIRD? Already checked. Genuinely no common words.
+      //
+      //   Change 3A last letter to something that makes 3D easier.
+      //   3A: SWORE  S,W,O,R,E → c4=E
+      //   3D(c4): T_R_E: THREE? T,H,R,E,E pos0=T✓ pos2=R✓ pos4=E✓ ✓ ✓ THREE! r1=H r3=E ✓
+      //   But wait, CHOIR[4]=R and 3A=SWORE... SWORE[2]=O=c2✓ SWORE[4]=E=c4.
+      //   CHOIR[4]=R=r2,c4. 3D(c4) r2 should =THREE[2]=R ✓ ✓ !!
+      //
+      //   VERIFY ALL:
+      //   1A=PLANT: r0= P  L  A  N  T
+      //   2A=CHOIR: r2= C  H  O  I  R
+      //   3A=SWORE: r4= S  W  O  R  E
+      //
+      //   1D(c0): P(r0) ?(r1) C(r2) ?(r3) S(r4) → P_C_S: PACES? P,A,C,E,S ✓ r1=A r3=E ✓ PACES!
+      //   2D(c2): A(r0) ?(r1) O(r2) ?(r3) O(r4) → A_O_O: ALOOF? A,L,O,O,F pos4=F≠O.
+      //     A(r0)?O(r2)?O(r4): A_O_O → AFOOT? A,F,O,O,T pos4=T≠O.
+      //     Hmm. AZTOO? not a word. ANOA? 4 letters.
+      //     IGLOO has no A. What 5-letter words have A at pos0, O at pos2, O at pos4?
+      //     A?O?O: ABOON? not standard. ATOLL? A,T,O,L,L pos4=L≠O.
+      //     This is a tough constraint. Let me change 3A[2]:
+      //   3A: SWORE has O at [2] giving c2 col = A_O_O.
+      //   What if 3A[2]≠O? Let's try:
+      //   3A: STARE  S,T,A,R,E → c0=S✓ c2=A c4=E
+      //   2D(c2): A(r0)?O(r2=CHOIR[2]=O)?A(r4=STARE[2]=A)
+      //     = A_O_A: AROMA? A,R,O,M,A ✓ ✓ r1=R r3=M — AROMA!
+      //   3D(c4): T(r0)?R(r2=CHOIR[4]=R)?E(r4=STARE[4]=E)
+      //     = T_R_E: THREE ✓ r1=H r3=E ✓ (already verified above)
+      //   1D(c0): P(r0)?C(r2=CHOIR[0]=C)?S(r4=STARE[0]=S)
+      //     = P_C_S: PACES ✓ (already verified)
+      //
+      //   FINAL FINAL FINAL ACTUAL:
+      //   1-Across: PLANT  (Greenery, or a scheme)
+      //   2-Across: CHOIR  (Singing group)
+      //   3-Across: STARE  (Look intently)
+      //   1-Down:   PACES  (Measures steps)
+      //   2-Down:   AROMA  (Pleasant smell)
+      //   3-Down:   THREE  (One more than two)
+      //
+      //   Grid open cells:
+      //   row 0 (1A): all c0-c4 open
+      //   row 2 (2A): all c0-c4 open
+      //   row 4 (3A): all c0-c4 open
+      //   col 0 (1D): rows 0-4 open
+      //   col 2 (2D): rows 0-4 open
+      //   col 4 (3D): rows 0-4 open
+      //   Rows 1,3: only c0, c2, c4 open; c1,c3 blocked
+      //
+      //   LETTER GRID:
+      //        c0  c1  c2  c3  c4
+      //   r0:   P   L   A   N   T
+      //   r1:   A   ■   R   ■   H
+      //   r2:   C   H   O   I   R
+      //   r3:   E   ■   M   ■   E
+      //   r4:   S   T   A   R   E
+      //
+      //   Check every word:
+      //   1A r0: P L A N T = PLANT ✓
+      //   2A r2: C H O I R = CHOIR ✓
+      //   3A r4: S T A R E = STARE ✓
+      //   1D c0: P A C E S = PACES ✓
+      //   2D c2: A R O M A = AROMA ✓
+      //   3D c4: T H R E E = THREE ✓
+      // ─────────────────────────────────────────────────────────────────
+
+      const ROWS = 5,
+        COLS = 5;
+
+      // open[r][c] = true if cell is a white square
+      const open = [
+        [true, true, true, true, true], // r0: 1-Across
+        [true, false, true, false, true], // r1: 1-Down, 2-Down, 3-Down only
+        [true, true, true, true, true], // r2: 2-Across
+        [true, false, true, false, true], // r3: downs only
+        [true, true, true, true, true], // r4: 3-Across
+      ];
+
+      const SOLUTION = [
+        ["P", "L", "A", "N", "T"],
+        ["A", " ", "R", " ", "H"],
+        ["C", "H", "O", "I", "R"],
+        ["E", " ", "M", " ", "E"],
+        ["S", "T", "A", "R", "E"],
+      ];
+
+      const acrossWords = [
+        {
+          num: 1,
+          clue: "A garden plant, or a sneaky scheme",
+          row: 0,
+          col: 0,
+          len: 5,
+        },
+        { num: 2, clue: "A group that sings together", row: 2, col: 0, len: 5 },
+        { num: 3, clue: "To look at fixedly", row: 4, col: 0, len: 5 },
+      ];
+
+      const downWords = [
+        { num: 1, clue: "Steps, measured distances", row: 0, col: 0, len: 5 },
+        { num: 2, clue: "A pleasant smell", row: 0, col: 2, len: 5 },
+        { num: 3, clue: "One more than two", row: 0, col: 4, len: 5 },
+      ];
+
+      // word sequence: all across in order, then all down in order
+      const wordSequence = [
+        ...acrossWords.map((w) => ({ ...w, dir: "across" })),
+        ...downWords.map((w) => ({ ...w, dir: "down" })),
+      ];
+
+      // ── Build DOM ────────────────────────────────────────────────────
+      const gridEl = document.getElementById("grid");
+      const inputs = {}; // "r,c" -> <input>
+
+      // clue numbers on cells
+      const cellNums = {};
+      [...acrossWords, ...downWords].forEach((w) => {
+        const key = `${w.row},${w.col}`;
+        if (!cellNums[key] || w.num < cellNums[key]) cellNums[key] = w.num;
+      });
+
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const cell = document.createElement("div");
+          cell.classList.add("cell");
+          if (!open[r][c]) {
+            cell.classList.add("blocked");
+            gridEl.appendChild(cell);
+            continue;
+          }
+
+          if (cellNums[`${r},${c}`]) {
+            const span = document.createElement("span");
+            span.classList.add("num");
+            span.textContent = cellNums[`${r},${c}`];
+            cell.appendChild(span);
+          }
+
+          const inp = document.createElement("input");
+          inp.type = "text";
+          inp.maxLength = 1;
+          inp.autocomplete = "off";
+          inp.dataset.r = r;
+          inp.dataset.c = c;
+          cell.appendChild(inp);
+
+          inp.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            handleClick(r, c);
+          });
+          inp.addEventListener("keydown", handleKeyDown);
+          inp.addEventListener("input", handleInput);
+
+          inputs[`${r},${c}`] = inp;
+          gridEl.appendChild(cell);
+        }
+      }
+
+      // ── Clue list ────────────────────────────────────────────────────
+      const acrossListEl = document.getElementById("clues-across");
+      const downListEl = document.getElementById("clues-down");
+
+      acrossWords.forEach((w, i) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span class="cn">${w.num}.</span>${w.clue}`;
+        li.dataset.windex = i;
+        li.addEventListener("click", () => activateWord(wordSequence[i], 0));
+        acrossListEl.appendChild(li);
+      });
+
+      downWords.forEach((w, i) => {
+        const li = document.createElement("li");
+        li.innerHTML = `<span class="cn">${w.num}.</span>${w.clue}`;
+        li.dataset.windex = acrossWords.length + i;
+        li.addEventListener("click", () =>
+          activateWord(wordSequence[acrossWords.length + i], 0),
+        );
+        downListEl.appendChild(li);
+      });
+
+      // ── State ────────────────────────────────────────────────────────
+      let activeWordIndex = 0;
+      let activeLetter = 0;
+
+      activateWord(wordSequence[0], 0);
+
+      // ── Helpers ─────────────────────────────────────────────────────
+      function cellKey(r, c) {
+        return `${r},${c}`;
+      }
+
+      function wordCells(word) {
+        const cells = [];
+        for (let i = 0; i < word.len; i++) {
+          const r = word.dir === "across" ? word.row : word.row + i;
+          const c = word.dir === "across" ? word.col + i : word.col;
+          cells.push({ r, c });
+        }
+        return cells;
+      }
+
+      function activateWord(word, letterIdx) {
+        // update state
+        activeWordIndex = wordSequence.indexOf(word);
+        activeLetter = Math.max(0, Math.min(word.len - 1, letterIdx));
+
+        // clear all highlights
+        Object.values(inputs).forEach((inp) => {
+          inp.classList.remove("highlight-word", "highlight-active");
+        });
+
+        // highlight word cells
+        const cells = wordCells(word);
+        cells.forEach(({ r, c }) => {
+          const inp = inputs[cellKey(r, c)];
+          if (inp) inp.classList.add("highlight-word");
+        });
+
+        // highlight active cell
+        const active = cells[activeLetter];
+        if (active) {
+          const inp = inputs[cellKey(active.r, active.c)];
+          if (inp) {
+            inp.classList.add("highlight-active");
+            inp.focus();
+          }
+        }
+
+        // update clue highlights
+        document.querySelectorAll(".clue-group li").forEach((li, idx) => {
+          li.classList.toggle("active", idx === activeWordIndex);
+        });
+      }
+
+      function advanceWithinWord() {
+        const word = wordSequence[activeWordIndex];
+        if (activeLetter < word.len - 1) {
+          activateWord(word, activeLetter + 1);
+        } else {
+          // end of word — advance to next word
+          const nextIdx = (activeWordIndex + 1) % wordSequence.length;
+          activateWord(wordSequence[nextIdx], 0);
+        }
+      }
+
+      function retreatWithinWord() {
+        const word = wordSequence[activeWordIndex];
+        if (activeLetter > 0) {
+          activateWord(word, activeLetter - 1);
+        }
+      }
+
+      function handleClick(r, c) {
+        // If clicking a cell in the current word, move cursor there
+        const word = wordSequence[activeWordIndex];
+        const cells = wordCells(word);
+        const idx = cells.findIndex((cell) => cell.r === r && cell.c === c);
+        if (idx !== -1) {
+          activateWord(word, idx);
+          return;
+        }
+
+        // Otherwise, find a word that contains this cell
+        // Prefer same direction, then any
+        for (let i = 0; i < wordSequence.length; i++) {
+          const wCells = wordCells(wordSequence[i]);
+          const letterIdx = wCells.findIndex(
+            (cell) => cell.r === r && cell.c === c,
+          );
+          if (letterIdx !== -1) {
+            activateWord(wordSequence[i], letterIdx);
+            return;
+          }
+        }
+      }
+
+      function handleInput(e) {
+        const inp = e.target;
+        if (inp.value) {
+          inp.value = inp.value.slice(-1).toUpperCase();
+          advanceWithinWord();
+          checkComplete();
+        }
+      }
+
+      function handleKeyDown(e) {
+        const word = wordSequence[activeWordIndex];
+
+        if (e.key === "Backspace") {
+          e.preventDefault();
+          const { r, c } = wordCells(word)[activeLetter];
+          const inp = inputs[cellKey(r, c)];
+          if (inp.value) {
+            inp.value = "";
+          } else {
+            retreatWithinWord();
+            const prevCell = wordCells(word)[activeLetter];
+            const prevInp = inputs[cellKey(prevCell.r, prevCell.c)];
+            if (prevInp) prevInp.value = "";
+          }
+          return;
+        }
+
+        if (e.key === "ArrowRight" || (e.key === "Tab" && !e.shiftKey)) {
+          e.preventDefault();
+          if (word.dir === "across") advanceWithinWord();
+        }
+        if (e.key === "ArrowLeft" || (e.key === "Tab" && e.shiftKey)) {
+          e.preventDefault();
+          if (word.dir === "across") retreatWithinWord();
+        }
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          if (word.dir === "down") advanceWithinWord();
+        }
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          if (word.dir === "down") retreatWithinWord();
+        }
+
+        // Letter key: clear first so input event fires cleanly
+        if (e.key.length === 1 && e.key.match(/[a-zA-Z]/)) {
+          e.target.value = "";
+        }
+      }
+
+      function checkComplete() {
+        const allCorrect = Object.entries(inputs).every(([key, inp]) => {
+          const [r, c] = key.split(",").map(Number);
+          return inp.value.toUpperCase() === SOLUTION[r][c];
+        });
+        if (allCorrect) {
+          document.getElementById("success").classList.add("show");
+        }
+      }
+    </script>
   </body>
 </html>
