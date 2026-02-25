@@ -32,7 +32,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 20px 20px 40px;
+        padding: 40px 20px 20px;
       }
 
       header {
@@ -473,7 +473,6 @@
 
           const inp = document.createElement("input");
           inp.type = "text";
-          inp.maxLength = 1;
           inp.autocomplete = "off";
           inp.spellcheck = false;
           cell.appendChild(inp);
@@ -503,6 +502,20 @@
         clueEls[w.id] = li;
       });
 
+      // Separate store for the actual letter at each cell, so we can clear
+      // the focused input's .value (for mobile) without losing the displayed letter.
+      const gridValues = {}; // "r,c" -> uppercase letter or ''
+
+      function setGridValue(r, c, letter) {
+        gridValues[`${r},${c}`] = letter;
+        const inp = inputAt[`${r},${c}`];
+        if (inp) inp.value = letter;
+      }
+
+      function getGridValue(r, c) {
+        return gridValues[`${r},${c}`] || "";
+      }
+
       // ─── ACTIVATE WORD ────────────────────────────────────────────────────────────
       function activateWord(word, letterIdx) {
         activeWord = word;
@@ -514,8 +527,12 @@
         );
         word.cells.forEach(({ r, c }) => {
           const inp = inputAt[`${r},${c}`];
-          if (inp) inp.classList.add("hl-word");
+          if (inp) {
+            inp.classList.add("hl-word");
+            inp.value = getGridValue(r, c);
+          }
         });
+
         const { r, c } = word.cells[activeCellIdx];
         const inp = inputAt[`${r},${c}`];
         if (inp) {
@@ -599,14 +616,14 @@
         if (e.key === "Backspace") {
           e.preventDefault();
           const { r, c } = activeWord.cells[activeCellIdx];
-          const inp = inputAt[`${r},${c}`];
-          if (inp.value) {
-            inp.value = "";
+          if (getGridValue(r, c)) {
+            setGridValue(r, c, "");
+            // Keep input empty (it's already cleared in activateWord)
           } else {
             retreatInWord();
             const prev = activeWord.cells[activeCellIdx];
-            const prevInp = inputAt[`${prev.r},${prev.c}`];
-            if (prevInp) prevInp.value = "";
+            setGridValue(prev.r, prev.c, "");
+            // The newly focused cell is now active and its input was cleared by activateWord
           }
           return;
         }
@@ -627,45 +644,52 @@
           e.preventDefault();
           if (activeWord.dir === "down") retreatInWord();
         }
-
-        // Clear cell before letter lands so input event fires cleanly
-        if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) {
-          e.currentTarget.value = "";
-        }
       }
 
       // ─── INPUT HANDLER ────────────────────────────────────────────────────────────
       function onInput(e) {
-        const inp = e.target;
-        if (!inp.value) return;
+        // e.data is the character the user just typed (reliable on mobile).
+        // Fall back to reading inp.value if e.data is unavailable.
+        const raw = e.data ?? e.target.value;
+        if (!raw) return;
+
+        const letter = raw
+          .replace(/[^a-zA-Z]/g, "")
+          .slice(-1)
+          .toUpperCase();
+        if (!letter) {
+          // Restore the stored value if something non-alphabetic was entered
+          const { r, c } = activeWord.cells[activeCellIdx];
+          e.target.value = getGridValue(r, c);
+          return;
+        }
 
         if (!startTime) startTime = Date.now();
-        inp.value = inp.value.slice(-1).toUpperCase();
 
-        // Always just advance to the next cell within the current word (stop at end)
+        const { r, c } = activeWord.cells[activeCellIdx];
+        setGridValue(r, c, letter);
+
         advanceInWord();
-
         checkComplete();
       }
 
       // ─── COMPLETION CHECK ─────────────────────────────────────────────────────────
       function isWordFilled(word) {
-        return word.cells.every(
-          ({ r, c }) => (inputAt[`${r},${c}`]?.value ?? "").trim() !== "",
-        );
+        return word.cells.every(({ r, c }) => getGridValue(r, c) !== "");
       }
 
       function checkComplete() {
         if (puzzleDone) return;
 
-        const allFilled = Object.entries(inputAt).every(
-          ([, inp]) => inp.value.trim() !== "",
-        );
+        const allFilled = Object.keys(inputAt).every((key) => {
+          const [r, c] = key.split(",").map(Number);
+          return getGridValue(r, c) !== "";
+        });
         if (!allFilled) return;
 
-        const allCorrect = Object.entries(inputAt).every(([key, inp]) => {
+        const allCorrect = Object.keys(inputAt).every((key) => {
           const [r, c] = key.split(",").map(Number);
-          return inp.value === SOLUTION[r][c];
+          return getGridValue(r, c) === SOLUTION[r][c];
         });
 
         const errorEl = document.getElementById("error-msg");
