@@ -54,10 +54,12 @@
         color: var(--accent);
       }
 
+      /* ── GRID ── */
       .grid-wrapper {
         border: 3px solid var(--ink);
         display: inline-block;
         line-height: 0;
+        position: relative;
       }
       .grid {
         display: grid;
@@ -69,10 +71,14 @@
         height: var(--cell-size);
         position: relative;
         border: 1.5px solid var(--ink);
+        cursor: text;
+        user-select: none;
+        -webkit-user-select: none;
       }
       .cell.blocked {
         background: var(--ink);
         overflow: hidden;
+        cursor: default;
       }
       .cell.blocked img {
         width: 100%;
@@ -81,29 +87,25 @@
         display: block;
       }
 
-      .cell input {
+      /* Letter display inside white cells */
+      .cell .letter {
         position: absolute;
         inset: 0;
-        width: 100%;
-        height: 100%;
-        border: none;
-        background: transparent;
-        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding-top: 6px; /* nudge down slightly for clue number */
         font-family: "Playfair Display", Georgia, serif;
         font-size: 1.55rem;
         font-weight: 700;
         color: var(--ink);
         text-transform: uppercase;
-        outline: none;
-        caret-color: transparent;
-        cursor: default;
-        padding-top: 8px;
-        transition: background 0.1s;
+        pointer-events: none;
       }
-      .cell input.hl-word {
+      .cell.hl-word {
         background: #e8d9b0;
       }
-      .cell input.hl-active {
+      .cell.hl-active {
         background: #f0c040;
       }
 
@@ -118,6 +120,19 @@
         line-height: 1;
       }
 
+      /* Single hidden input that captures all typing */
+      #capture {
+        position: fixed;
+        opacity: 0;
+        width: 1px;
+        height: 1px;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+        font-size: 16px; /* prevents iOS zoom */
+      }
+
+      /* ── ERROR ── */
       .error-msg {
         margin-top: 16px;
         width: 100%;
@@ -138,6 +153,7 @@
         opacity: 1;
       }
 
+      /* ── SHAKE ── */
       @keyframes shake {
         0%,
         100% {
@@ -160,6 +176,7 @@
         animation: shake 0.5s ease;
       }
 
+      /* ── CLUES ── */
       .clues-section {
         margin-top: 32px;
         width: 100%;
@@ -206,6 +223,7 @@
         color: var(--accent);
       }
 
+      /* ── VICTORY ── */
       .victory-overlay {
         display: none;
         position: fixed;
@@ -291,6 +309,17 @@
       <div class="byline">Thursday's Mini Crossword</div>
     </header>
 
+    <!-- Single hidden input — permanently focused, captures all typing -->
+    <input
+      id="capture"
+      type="text"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="characters"
+      spellcheck="false"
+      inputmode="text"
+    />
+
     <div class="grid-wrapper" id="grid-wrapper">
       <div class="grid" id="grid"></div>
     </div>
@@ -358,7 +387,6 @@
         [1, 1, 1, 1, 1],
       ];
 
-      // Words defined explicitly — cells listed in typing order
       const WORDS = [
         {
           id: "1A",
@@ -443,28 +471,44 @@
       // ─── STATE ────────────────────────────────────────────────────────────────────
       let activeWord = WORDS[0];
       let activeCellIdx = 0;
+      const gridValues = {}; // "r,c" -> uppercase letter or ''
       let startTime = null;
       let puzzleDone = false;
       let hasShaken = false;
 
+      // ─── HELPERS ──────────────────────────────────────────────────────────────────
+      function getVal(r, c) {
+        return gridValues[`${r},${c}`] || "";
+      }
+      function setVal(r, c, letter) {
+        gridValues[`${r},${c}`] = letter;
+        const el = document.querySelector(
+          `.cell[data-r="${r}"][data-c="${c}"] .letter`,
+        );
+        if (el) el.textContent = letter;
+      }
+      function isWordFilled(word) {
+        return word.cells.every(({ r, c }) => getVal(r, c) !== "");
+      }
+
       // ─── BUILD GRID ───────────────────────────────────────────────────────────────
       const gridEl = document.getElementById("grid");
-      const inputAt = {}; // "r,c" -> <input>
+      const cellEl = {}; // "r,c" -> .cell div
 
-      // Determine clue number label for each cell that starts a word
       const cellLabel = {};
       WORDS.forEach((w) => {
         const { r, c } = w.cells[0];
         const key = `${r},${c}`;
-        if (!cellLabel[key] || Number(w.label) < Number(cellLabel[key])) {
+        if (!cellLabel[key] || Number(w.label) < Number(cellLabel[key]))
           cellLabel[key] = w.label;
-        }
       });
 
       for (let r = 0; r < 5; r++) {
         for (let c = 0; c < 5; c++) {
           const cell = document.createElement("div");
           cell.classList.add("cell");
+          cell.dataset.r = r;
+          cell.dataset.c = c;
 
           if (!OPEN[r][c]) {
             cell.classList.add("blocked");
@@ -472,38 +516,34 @@
             img.src = "pugg.webp";
             img.alt = "";
             cell.appendChild(img);
-            gridEl.appendChild(cell);
-            continue;
+          } else {
+            if (cellLabel[`${r},${c}`]) {
+              const num = document.createElement("span");
+              num.classList.add("num");
+              num.textContent = cellLabel[`${r},${c}`];
+              cell.appendChild(num);
+            }
+            const letter = document.createElement("div");
+            letter.classList.add("letter");
+            cell.appendChild(letter);
+
+            cell.addEventListener("mousedown", (e) => {
+              e.preventDefault();
+              onCellClick(r, c);
+            });
+            cell.addEventListener("touchend", (e) => {
+              e.preventDefault();
+              onCellClick(r, c);
+            });
+            cellEl[`${r},${c}`] = cell;
           }
-
-          if (cellLabel[`${r},${c}`]) {
-            const span = document.createElement("span");
-            span.classList.add("num");
-            span.textContent = cellLabel[`${r},${c}`];
-            cell.appendChild(span);
-          }
-
-          const inp = document.createElement("input");
-          inp.type = "text";
-          inp.autocomplete = "off";
-          inp.spellcheck = false;
-          cell.appendChild(inp);
-          inputAt[`${r},${c}`] = inp;
-
-          // Closures capture r, c correctly here
-          inp.addEventListener("mousedown", (e) => {
-            e.preventDefault();
-            onCellClick(r, c);
-          });
-          inp.addEventListener("keydown", onKeyDown);
-          inp.addEventListener("input", onInput);
 
           gridEl.appendChild(cell);
         }
       }
 
       // ─── BUILD CLUE LISTS ─────────────────────────────────────────────────────────
-      const clueEls = {}; // word.id -> <li>
+      const clueEls = {};
       WORDS.forEach((w) => {
         const li = document.createElement("li");
         li.innerHTML = `<span class="cn">${w.label}.</span>${w.clue}`;
@@ -514,132 +554,30 @@
         clueEls[w.id] = li;
       });
 
-      // Separate store for the actual letter at each cell, so we can clear
-      // the focused input's .value (for mobile) without losing the displayed letter.
-      const gridValues = {}; // "r,c" -> uppercase letter or ''
+      // ─── CAPTURE INPUT ────────────────────────────────────────────────────────────
+      // One hidden input stays permanently focused. All keyboard/mobile input
+      // goes through it — no focus juggling, no dropped letters.
+      const capture = document.getElementById("capture");
 
-      function setGridValue(r, c, letter) {
-        gridValues[`${r},${c}`] = letter;
-        const inp = inputAt[`${r},${c}`];
-        if (inp) inp.value = letter;
-      }
+      // Re-focus capture whenever it loses focus (e.g. user taps elsewhere)
+      capture.addEventListener("blur", () => {
+        // Small delay so tap events on cells fire first
+        setTimeout(() => capture.focus(), 50);
+      });
 
-      function getGridValue(r, c) {
-        return gridValues[`${r},${c}`] || "";
-      }
-
-      // ─── ACTIVATE WORD ────────────────────────────────────────────────────────────
-      function activateWord(word, letterIdx) {
-        activeWord = word;
-        activeCellIdx = Math.max(0, Math.min(word.cells.length - 1, letterIdx));
-
-        // Highlights
-        Object.values(inputAt).forEach((inp) =>
-          inp.classList.remove("hl-word", "hl-active"),
-        );
-        word.cells.forEach(({ r, c }) => {
-          const inp = inputAt[`${r},${c}`];
-          if (inp) {
-            inp.classList.add("hl-word");
-            inp.value = getGridValue(r, c);
-          }
-        });
-
-        const { r, c } = word.cells[activeCellIdx];
-        const inp = inputAt[`${r},${c}`];
-        if (inp) {
-          inp.classList.replace("hl-word", "hl-active");
-          inp.focus();
-        }
-
-        // Clue list
-        Object.values(clueEls).forEach((li) => li.classList.remove("active"));
-        clueEls[word.id].classList.add("active");
-      }
-
-      function advanceInWord() {
-        if (activeCellIdx < activeWord.cells.length - 1) {
-          activateWord(activeWord, activeCellIdx + 1);
-        }
-        // At last cell: stay put
-      }
-
-      function retreatInWord() {
-        if (activeCellIdx > 0) {
-          activateWord(activeWord, activeCellIdx - 1);
-        }
-      }
-
-      // ─── CLICK HANDLER ────────────────────────────────────────────────────────────
-      // Simple rule: if a word STARTS at the clicked cell, activate that word.
-      // The only ambiguous cell is (0,0) where both 1A and 1D start — default to 1A.
-      // For mid-word cells: stay on current word if it contains the cell, else find one that does.
-      function onCellClick(r, c) {
-        // Words that start at this cell
-        const starters = WORDS.filter(
-          (w) => w.cells[0].r === r && w.cells[0].c === c,
-        );
-
-        if (starters.length === 1) {
-          activateWord(starters[0], 0);
-          return;
-        }
-
-        if (starters.length > 1) {
-          // Only happens at (0,0): 1A and 1D both start here
-          // Default to 1A unless it's full and 1D is not
-          const wordAcross = starters.find((w) => w.dir === "across");
-          const wordDown = starters.find((w) => w.dir === "down");
-          if (
-            wordAcross &&
-            isWordFilled(wordAcross) &&
-            wordDown &&
-            !isWordFilled(wordDown)
-          ) {
-            activateWord(wordDown, 0);
-          } else {
-            activateWord(wordAcross || starters[0], 0);
-          }
-          return;
-        }
-
-        // No word starts here — mid-word cell.
-        // If current word contains it, move cursor there.
-        const idxInCurrent = activeWord.cells.findIndex(
-          (cell) => cell.r === r && cell.c === c,
-        );
-        if (idxInCurrent !== -1) {
-          activateWord(activeWord, idxInCurrent);
-          return;
-        }
-
-        // Otherwise switch to whichever word contains this cell.
-        for (const w of WORDS) {
-          const idx = w.cells.findIndex((cell) => cell.r === r && cell.c === c);
-          if (idx !== -1) {
-            activateWord(w, idx);
-            return;
-          }
-        }
-      }
-
-      // ─── KEY HANDLER ──────────────────────────────────────────────────────────────
-      function onKeyDown(e) {
+      capture.addEventListener("keydown", (e) => {
         if (e.key === "Backspace") {
           e.preventDefault();
           const { r, c } = activeWord.cells[activeCellIdx];
-          if (getGridValue(r, c)) {
-            setGridValue(r, c, "");
-            // Keep input empty (it's already cleared in activateWord)
+          if (getVal(r, c)) {
+            setVal(r, c, "");
           } else {
             retreatInWord();
             const prev = activeWord.cells[activeCellIdx];
-            setGridValue(prev.r, prev.c, "");
-            // The newly focused cell is now active and its input was cleared by activateWord
+            setVal(prev.r, prev.c, "");
           }
           return;
         }
-
         if (e.key === "ArrowRight") {
           e.preventDefault();
           if (activeWord.dir === "across") advanceInWord();
@@ -656,65 +594,130 @@
           e.preventDefault();
           if (activeWord.dir === "down") retreatInWord();
         }
-      }
+      });
 
-      // ─── INPUT HANDLER ────────────────────────────────────────────────────────────
-      function onInput(e) {
-        // e.data is the character the user just typed (reliable on mobile).
-        // Fall back to reading inp.value if e.data is unavailable.
-        const raw = e.data ?? e.target.value;
-        if (!raw) return;
+      capture.addEventListener("input", (e) => {
+        // e.data = the character(s) just typed. Take the last alpha char.
+        const raw = e.data ?? capture.value;
+        // Always reset the hidden input so it's ready for the next character
+        capture.value = "";
 
-        const letter = raw
+        const letter = (raw || "")
           .replace(/[^a-zA-Z]/g, "")
           .slice(-1)
           .toUpperCase();
-        if (!letter) {
-          // Restore the stored value if something non-alphabetic was entered
-          const { r, c } = activeWord.cells[activeCellIdx];
-          e.target.value = getGridValue(r, c);
-          return;
-        }
+        if (!letter) return;
 
         if (!startTime) startTime = Date.now();
 
         const { r, c } = activeWord.cells[activeCellIdx];
-        setGridValue(r, c, letter);
-
+        setVal(r, c, letter);
         advanceInWord();
         checkComplete();
+      });
+
+      // Focus the capture input on page load and whenever the grid area is tapped
+      document
+        .getElementById("grid-wrapper")
+        .addEventListener("mousedown", () => capture.focus());
+      capture.focus();
+
+      // ─── ACTIVATE WORD ────────────────────────────────────────────────────────────
+      function activateWord(word, letterIdx) {
+        activeWord = word;
+        activeCellIdx = Math.max(0, Math.min(word.cells.length - 1, letterIdx));
+
+        // Clear all highlights
+        Object.values(cellEl).forEach((el) =>
+          el.classList.remove("hl-word", "hl-active"),
+        );
+
+        // Highlight word cells
+        word.cells.forEach(({ r, c }) => {
+          const el = cellEl[`${r},${c}`];
+          if (el) el.classList.add("hl-word");
+        });
+
+        // Highlight active cell
+        const { r, c } = word.cells[activeCellIdx];
+        const el = cellEl[`${r},${c}`];
+        if (el) {
+          el.classList.remove("hl-word");
+          el.classList.add("hl-active");
+        }
+
+        // Clue list
+        Object.values(clueEls).forEach((li) => li.classList.remove("active"));
+        clueEls[word.id].classList.add("active");
+
+        // Keep capture focused
+        capture.focus();
+      }
+
+      function advanceInWord() {
+        if (activeCellIdx < activeWord.cells.length - 1) {
+          activateWord(activeWord, activeCellIdx + 1);
+        }
+      }
+
+      function retreatInWord() {
+        if (activeCellIdx > 0) {
+          activateWord(activeWord, activeCellIdx - 1);
+        }
+      }
+
+      // ─── CLICK HANDLER ────────────────────────────────────────────────────────────
+      function onCellClick(r, c) {
+        const starters = WORDS.filter(
+          (w) => w.cells[0].r === r && w.cells[0].c === c,
+        );
+
+        if (starters.length === 1) {
+          activateWord(starters[0], 0);
+          return;
+        }
+        if (starters.length > 1) {
+          // Only (0,0): default to 1A unless full and 1D isn't
+          const wa = starters.find((w) => w.dir === "across");
+          const wd = starters.find((w) => w.dir === "down");
+          if (wa && isWordFilled(wa) && wd && !isWordFilled(wd))
+            activateWord(wd, 0);
+          else activateWord(wa || starters[0], 0);
+          return;
+        }
+
+        // Mid-word cell: stay on current word if it contains this cell
+        const idxInCurrent = activeWord.cells.findIndex(
+          (cell) => cell.r === r && cell.c === c,
+        );
+        if (idxInCurrent !== -1) {
+          activateWord(activeWord, idxInCurrent);
+          return;
+        }
+
+        // Otherwise find any word that contains it
+        for (const w of WORDS) {
+          const idx = w.cells.findIndex((cell) => cell.r === r && cell.c === c);
+          if (idx !== -1) {
+            activateWord(w, idx);
+            return;
+          }
+        }
       }
 
       // ─── COMPLETION CHECK ─────────────────────────────────────────────────────────
-      function isWordFilled(word) {
-        return word.cells.every(({ r, c }) => getGridValue(r, c) !== "");
-      }
-
       function checkComplete() {
         if (puzzleDone) return;
 
-        // Sync any inp.value that may be ahead of gridValues (can happen on mobile)
-        Object.keys(inputAt).forEach((key) => {
+        const allFilled = Object.keys(cellEl).every((key) => {
           const [r, c] = key.split(",").map(Number);
-          const inp = inputAt[key];
-          const displayed = inp.value
-            .replace(/[^a-zA-Z]/g, "")
-            .slice(-1)
-            .toUpperCase();
-          if (displayed && displayed !== getGridValue(r, c)) {
-            gridValues[key] = displayed;
-          }
-        });
-
-        const allFilled = Object.keys(inputAt).every((key) => {
-          const [r, c] = key.split(",").map(Number);
-          return getGridValue(r, c) !== "";
+          return getVal(r, c) !== "";
         });
         if (!allFilled) return;
 
-        const allCorrect = Object.keys(inputAt).every((key) => {
+        const allCorrect = Object.keys(cellEl).every((key) => {
           const [r, c] = key.split(",").map(Number);
-          return getGridValue(r, c) === SOLUTION[r][c];
+          return getVal(r, c) === SOLUTION[r][c];
         });
 
         const errorEl = document.getElementById("error-msg");
