@@ -633,11 +633,12 @@
         const cellEl = {};
         const cellLabel = {};
 
+        // For each cell, prefer the across label; only use down if no across starts here.
+        // This matches standard crossword convention where shared cells take the across number.
         WORDS.forEach((w) => {
           const { r, c } = w.cells[0];
           const key = `${r},${c}`;
-          if (!cellLabel[key] || Number(w.label) < Number(cellLabel[key]))
-            cellLabel[key] = w.label;
+          if (!cellLabel[key] || w.dir === "across") cellLabel[key] = w.label;
         });
 
         for (let r = 0; r < 5; r++) {
