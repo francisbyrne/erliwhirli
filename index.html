@@ -54,6 +54,71 @@
         color: var(--accent);
       }
 
+      /* ── LOADING ── */
+      .loading-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        padding: 40px;
+      }
+      .loading-state .spinner {
+        width: 36px;
+        height: 36px;
+        border: 3px solid #d4c9b0;
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .loading-state p {
+        font-size: 0.85rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: #8a7060;
+      }
+
+      /* ── FETCH ERROR ── */
+      .fetch-error {
+        display: none;
+        max-width: 360px;
+        background: #fff0eb;
+        border: 2px solid var(--accent);
+        padding: 20px 24px;
+        text-align: center;
+      }
+      .fetch-error h3 {
+        font-family: "Playfair Display", serif;
+        font-size: 1rem;
+        color: var(--accent);
+        margin-bottom: 8px;
+      }
+      .fetch-error p {
+        font-size: 0.82rem;
+        line-height: 1.6;
+        color: #5a3020;
+      }
+      .fetch-error code {
+        display: block;
+        margin-top: 10px;
+        font-size: 0.75rem;
+        background: #fde0d5;
+        padding: 6px 10px;
+        word-break: break-all;
+        color: #8a2010;
+      }
+
+      /* ── PUZZLE CONTAINER (hidden until loaded) ── */
+      #puzzle-container {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+      }
+
       /* ── GRID ── */
       .grid-wrapper {
         border: 3px solid var(--ink);
@@ -87,14 +152,13 @@
         display: block;
       }
 
-      /* Letter display inside white cells */
       .cell .letter {
         position: absolute;
         inset: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding-top: 6px; /* nudge down slightly for clue number */
+        padding-top: 6px;
         font-family: "Playfair Display", Georgia, serif;
         font-size: 1.55rem;
         font-weight: 700;
@@ -120,7 +184,6 @@
         line-height: 1;
       }
 
-      /* Single hidden input that captures all typing */
       #capture {
         position: fixed;
         opacity: 0;
@@ -129,7 +192,7 @@
         top: 0;
         left: 0;
         pointer-events: none;
-        font-size: 16px; /* prevents iOS zoom */
+        font-size: 16px;
       }
 
       /* ── ERROR ── */
@@ -309,6 +372,22 @@
       <div class="byline">Thursday's Mini Crossword</div>
     </header>
 
+    <!-- Loading state -->
+    <div class="loading-state" id="loading-state">
+      <div class="spinner"></div>
+      <p>Loading puzzle…</p>
+    </div>
+
+    <!-- Fetch error state -->
+    <div class="fetch-error" id="fetch-error">
+      <h3>Couldn't load the puzzle</h3>
+      <p>
+        Make sure your Google Sheet is published and the Sheet ID below is
+        correct.
+      </p>
+      <code id="fetch-error-url"></code>
+    </div>
+
     <!-- Single hidden input — permanently focused, captures all typing -->
     <input
       id="capture"
@@ -320,23 +399,26 @@
       inputmode="text"
     />
 
-    <div class="grid-wrapper" id="grid-wrapper">
-      <div class="grid" id="grid"></div>
-    </div>
+    <!-- Puzzle (shown after load) -->
+    <div id="puzzle-container">
+      <div class="grid-wrapper" id="grid-wrapper">
+        <div class="grid" id="grid"></div>
+      </div>
 
-    <div class="error-msg" id="error-msg">
-      ⚠ One or more answers is incorrect — keep going!
-    </div>
+      <div class="error-msg" id="error-msg">
+        ⚠ One or more answers is incorrect — keep going!
+      </div>
 
-    <div class="clues-section">
-      <div class="clues-cols">
-        <div class="clue-group">
-          <h2>Across</h2>
-          <ul id="clues-across"></ul>
-        </div>
-        <div class="clue-group">
-          <h2>Down</h2>
-          <ul id="clues-down"></ul>
+      <div class="clues-section">
+        <div class="clues-cols">
+          <div class="clue-group">
+            <h2>Across</h2>
+            <ul id="clues-across"></ul>
+          </div>
+          <div class="clue-group">
+            <h2>Down</h2>
+            <ul id="clues-down"></ul>
+          </div>
         </div>
       </div>
     </div>
@@ -359,397 +441,429 @@
     </div>
 
     <script>
-      // ─── PUZZLE ───────────────────────────────────────────────────────────────────
+      // ─── CONFIGURATION ────────────────────────────────────────────────────────────
       //
-      //       c0  c1  c2  c3  c4
-      //  r0:   P   L   A   N   T   ← 1-Across: PLANT
-      //  r1:   A   ■   R   ■   H
-      //  r2:   C   H   O   I   R   ← 2-Across: CHOIR
-      //  r3:   E   ■   M   ■   E
-      //  r4:   S   T   A   R   E   ← 3-Across: STARE
-      //        ↑       ↑       ↑
-      //      1-Down  2-Down  3-Down
-      //      PACES   AROMA   THREE
+      // 1. Share your Google Sheet publicly:
+      //    Share → Change to "Anyone with the link" → Viewer
+      //
+      // 2. Copy your Sheet ID from the URL:
+      //    https://docs.google.com/spreadsheets/d/SHEET_ID/edit
+      //                                              ^^^^^^^^
+      //    NOTE: Use this shorter ID — NOT the long "2PACX-..." publish key.
+      //
+      // 3. If your puzzle is on a specific tab, set SHEET_GID to that tab's gid
+      //    (visible in the URL bar when you click the tab), otherwise leave as "0".
+      //
+      const SHEET_ID = "1WnNEgj1pwetAm6Cu2ZCyIJfAoldQFqOiTPHb914qkhs";
+      const SHEET_GID = "0";
 
-      const SOLUTION = [
-        ["K", "E", "V", "I", "N"],
-        ["I", " ", "A", " ", "A"],
-        ["N", "O", "P", "O", "P"],
-        ["E", " ", "O", " ", "P"],
-        ["S", "O", "R", "R", "Y"],
-      ];
+      // ─── GOOGLE SHEET FORMAT ──────────────────────────────────────────────────────
+      //
+      // Your sheet must have these columns (header row required):
+      //
+      //   direction | number | clue                        | answer | row | col
+      //   ──────────┼────────┼─────────────────────────────┼────────┼─────┼────
+      //   across    | 1      | We need to talk about...    | KEVIN  | 0   | 0
+      //   across    | 2      | What to say to boundaries.. | NOPO   | 2   | 0
+      //   down      | 1      | Hope St Brunswick Cafe...   | KINES  | 0   | 0
+      //
+      //  - direction : "across" or "down"
+      //  - number    : the clue label (1, 2, 3 …)
+      //  - clue      : clue text (can contain any characters)
+      //  - answer    : the answer word in UPPERCASE
+      //  - row       : 0-based row of the first letter
+      //  - col       : 0-based column of the first letter
+      //
+      // Blocked cells are inferred automatically from cells not covered by any answer.
 
-      const OPEN = [
-        [1, 1, 1, 1, 1],
-        [1, 0, 1, 0, 1],
-        [1, 1, 1, 1, 1],
-        [1, 0, 1, 0, 1],
-        [1, 1, 1, 1, 1],
-      ];
+      // ─── FETCH & PARSE ────────────────────────────────────────────────────────────
+      // Uses the gviz/tq JSONP endpoint — no CORS issues, no server needed.
+      function loadPuzzle() {
+        return new Promise((resolve) => {
+          const callbackName = "_sheetCallback_" + Date.now();
+          const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:${callbackName}&gid=${SHEET_GID}`;
 
-      const WORDS = [
-        {
-          id: "1A",
-          label: "1",
-          dir: "across",
-          clue: "We need to talk about Mr '07.",
-          cells: [
-            { r: 0, c: 0 },
-            { r: 0, c: 1 },
-            { r: 0, c: 2 },
-            { r: 0, c: 3 },
-            { r: 0, c: 4 },
-          ],
-        },
-        {
-          id: "2A",
-          label: "2",
-          dir: "across",
-          clue: "What to say to boundaries with your grandpa OR when an American is ordering a drink but watching their sugar intake. (2,3)",
-          cells: [
-            { r: 2, c: 0 },
-            { r: 2, c: 1 },
-            { r: 2, c: 2 },
-            { r: 2, c: 3 },
-            { r: 2, c: 4 },
-          ],
-        },
-        {
-          id: "3A",
-          label: "3",
-          dir: "across",
-          clue: "It's too late now to say this. 'Cos I'm missin' more than just your body. 🎶",
-          cells: [
-            { r: 4, c: 0 },
-            { r: 4, c: 1 },
-            { r: 4, c: 2 },
-            { r: 4, c: 3 },
-            { r: 4, c: 4 },
-          ],
-        },
-        {
-          id: "1D",
-          label: "1",
-          dir: "down",
-          clue: "Hope St Brunswick Cafe famous for kinda cunty staff.",
-          cells: [
-            { r: 0, c: 0 },
-            { r: 1, c: 0 },
-            { r: 2, c: 0 },
-            { r: 3, c: 0 },
-            { r: 4, c: 0 },
-          ],
-        },
-        {
-          id: "2D",
-          label: "2",
-          dir: "down",
-          clue: "Breathe in the vape. Breathe out the ____.",
-          cells: [
-            { r: 0, c: 2 },
-            { r: 1, c: 2 },
-            { r: 2, c: 2 },
-            { r: 3, c: 2 },
-            { r: 4, c: 2 },
-          ],
-        },
-        {
-          id: "3D",
-          label: "3",
-          dir: "down",
-          clue: "Sleepy Australian diaper.",
-          cells: [
-            { r: 0, c: 4 },
-            { r: 1, c: 4 },
-            { r: 2, c: 4 },
-            { r: 3, c: 4 },
-            { r: 4, c: 4 },
-          ],
-        },
-      ];
+          const timeout = setTimeout(() => {
+            cleanup();
+            showFetchError(url, new Error("Request timed out"));
+            resolve(null);
+          }, 10000);
 
-      // ─── STATE ────────────────────────────────────────────────────────────────────
-      let activeWord = WORDS[0];
-      let activeCellIdx = 0;
-      const gridValues = {}; // "r,c" -> uppercase letter or ''
-      let startTime = null;
-      let puzzleDone = false;
-      let hasShaken = false;
+          function cleanup() {
+            clearTimeout(timeout);
+            delete window[callbackName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+          }
 
-      // ─── HELPERS ──────────────────────────────────────────────────────────────────
-      function getVal(r, c) {
-        return gridValues[`${r},${c}`] || "";
-      }
-      function setVal(r, c, letter) {
-        gridValues[`${r},${c}`] = letter;
-        const el = document.querySelector(
-          `.cell[data-r="${r}"][data-c="${c}"] .letter`,
-        );
-        if (el) el.textContent = letter;
-      }
-      function isWordFilled(word) {
-        return word.cells.every(({ r, c }) => getVal(r, c) !== "");
-      }
+          window[callbackName] = function (json) {
+            cleanup();
+            try {
+              const rows = json.table.rows;
+              const cols = json.table.cols.map((c) =>
+                c.label.toLowerCase().trim(),
+              );
 
-      // ─── BUILD GRID ───────────────────────────────────────────────────────────────
-      const gridEl = document.getElementById("grid");
-      const cellEl = {}; // "r,c" -> .cell div
-
-      const cellLabel = {};
-      WORDS.forEach((w) => {
-        const { r, c } = w.cells[0];
-        const key = `${r},${c}`;
-        if (!cellLabel[key] || Number(w.label) < Number(cellLabel[key]))
-          cellLabel[key] = w.label;
-      });
-
-      for (let r = 0; r < 5; r++) {
-        for (let c = 0; c < 5; c++) {
-          const cell = document.createElement("div");
-          cell.classList.add("cell");
-          cell.dataset.r = r;
-          cell.dataset.c = c;
-
-          if (!OPEN[r][c]) {
-            cell.classList.add("blocked");
-            const img = document.createElement("img");
-            img.src = "pugg.webp";
-            img.alt = "";
-            cell.appendChild(img);
-          } else {
-            if (cellLabel[`${r},${c}`]) {
-              const num = document.createElement("span");
-              num.classList.add("num");
-              num.textContent = cellLabel[`${r},${c}`];
-              cell.appendChild(num);
+              resolve(parseGviz(rows, cols));
+            } catch (err) {
+              showFetchError(url, err);
+              resolve(null);
             }
-            const letter = document.createElement("div");
-            letter.classList.add("letter");
-            cell.appendChild(letter);
+          };
 
-            cell.addEventListener("mousedown", (e) => {
-              e.preventDefault();
-              onCellClick(r, c);
-            });
-            cell.addEventListener("touchend", (e) => {
-              e.preventDefault();
-              onCellClick(r, c);
-            });
-            cellEl[`${r},${c}`] = cell;
-          }
-
-          gridEl.appendChild(cell);
-        }
+          const script = document.createElement("script");
+          script.onerror = () => {
+            cleanup();
+            showFetchError(url, new Error("Script load failed"));
+            resolve(null);
+          };
+          script.src = url;
+          document.head.appendChild(script);
+        });
       }
 
-      // ─── BUILD CLUE LISTS ─────────────────────────────────────────────────────────
-      const clueEls = {};
-      WORDS.forEach((w) => {
-        const li = document.createElement("li");
-        li.innerHTML = `<span class="cn">${w.label}.</span>${w.clue}`;
-        li.addEventListener("click", () => activateWord(w, 0));
-        document
-          .getElementById(w.dir === "across" ? "clues-across" : "clues-down")
-          .appendChild(li);
-        clueEls[w.id] = li;
-      });
+      function parseGviz(rows, cols) {
+        const ci = (name) => cols.indexOf(name);
+        const iDir = ci("direction"),
+          iNum = ci("number"),
+          iClue = ci("clue"),
+          iAnswer = ci("answer"),
+          iRow = ci("row"),
+          iCol = ci("col");
 
-      // ─── CAPTURE INPUT ────────────────────────────────────────────────────────────
-      // One hidden input stays permanently focused. All keyboard/mobile input
-      // goes through it — no focus juggling, no dropped letters.
-      const capture = document.getElementById("capture");
+        if ([iDir, iNum, iClue, iAnswer, iRow, iCol].includes(-1)) {
+          throw new Error(
+            "Sheet is missing required columns: direction, number, clue, answer, row, col",
+          );
+        }
 
-      // Re-focus capture whenever it loses focus (e.g. user taps elsewhere)
-      capture.addEventListener("blur", () => {
-        // Small delay so tap events on cells fire first
-        setTimeout(() => capture.focus(), 50);
-      });
+        const WORDS = [];
+        const SOLUTION = Array.from({ length: 5 }, () => Array(5).fill(" "));
+        const openSet = new Set();
 
-      capture.addEventListener("keydown", (e) => {
-        if (e.key === "Backspace") {
-          e.preventDefault();
-          const { r, c } = activeWord.cells[activeCellIdx];
-          if (getVal(r, c)) {
-            setVal(r, c, "");
-          } else {
-            retreatInWord();
-            const prev = activeWord.cells[activeCellIdx];
-            setVal(prev.r, prev.c, "");
+        for (const row of rows) {
+          const v = (i) => row.c[i]?.v ?? "";
+          const dir = String(v(iDir)).trim().toLowerCase();
+          const label = String(v(iNum)).trim();
+          const clue = String(v(iClue)).trim();
+          const answer = String(v(iAnswer)).trim().toUpperCase();
+          const startR = parseInt(v(iRow), 10);
+          const startC = parseInt(v(iCol), 10);
+
+          if (
+            !dir ||
+            !label ||
+            !clue ||
+            !answer ||
+            isNaN(startR) ||
+            isNaN(startC)
+          )
+            continue;
+
+          const wordCells = [];
+          for (let k = 0; k < answer.length; k++) {
+            const r = dir === "across" ? startR : startR + k;
+            const c = dir === "across" ? startC + k : startC;
+            wordCells.push({ r, c });
+            if (answer[k] !== " ") {
+              SOLUTION[r][c] = answer[k];
+              openSet.add(`${r},${c}`);
+            }
           }
-          return;
+
+          WORDS.push({
+            id: `${label}${dir === "across" ? "A" : "D"}`,
+            label,
+            dir,
+            clue,
+            cells: wordCells,
+          });
         }
-        if (e.key === "ArrowRight") {
-          e.preventDefault();
-          if (activeWord.dir === "across") advanceInWord();
-        }
-        if (e.key === "ArrowLeft") {
-          e.preventDefault();
-          if (activeWord.dir === "across") retreatInWord();
-        }
-        if (e.key === "ArrowDown") {
-          e.preventDefault();
-          if (activeWord.dir === "down") advanceInWord();
-        }
-        if (e.key === "ArrowUp") {
-          e.preventDefault();
-          if (activeWord.dir === "down") retreatInWord();
-        }
-      });
 
-      capture.addEventListener("input", (e) => {
-        // e.data = the character(s) just typed. Take the last alpha char.
-        const raw = e.data ?? capture.value;
-        // Always reset the hidden input so it's ready for the next character
-        capture.value = "";
-
-        const letter = (raw || "")
-          .replace(/[^a-zA-Z]/g, "")
-          .slice(-1)
-          .toUpperCase();
-        if (!letter) return;
-
-        if (!startTime) startTime = Date.now();
-
-        const { r, c } = activeWord.cells[activeCellIdx];
-        setVal(r, c, letter);
-        advanceInWord();
-        checkComplete();
-      });
-
-      // Focus the capture input on page load and whenever the grid area is tapped
-      document
-        .getElementById("grid-wrapper")
-        .addEventListener("mousedown", () => capture.focus());
-      capture.focus();
-
-      // ─── ACTIVATE WORD ────────────────────────────────────────────────────────────
-      function activateWord(word, letterIdx) {
-        activeWord = word;
-        activeCellIdx = Math.max(0, Math.min(word.cells.length - 1, letterIdx));
-
-        // Clear all highlights
-        Object.values(cellEl).forEach((el) =>
-          el.classList.remove("hl-word", "hl-active"),
+        const OPEN = Array.from({ length: 5 }, (_, r) =>
+          Array.from({ length: 5 }, (__, c) =>
+            openSet.has(`${r},${c}`) ? 1 : 0,
+          ),
         );
 
-        // Highlight word cells
-        word.cells.forEach(({ r, c }) => {
-          const el = cellEl[`${r},${c}`];
-          if (el) el.classList.add("hl-word");
-        });
-
-        // Highlight active cell
-        const { r, c } = word.cells[activeCellIdx];
-        const el = cellEl[`${r},${c}`];
-        if (el) {
-          el.classList.remove("hl-word");
-          el.classList.add("hl-active");
-        }
-
-        // Clue list
-        Object.values(clueEls).forEach((li) => li.classList.remove("active"));
-        clueEls[word.id].classList.add("active");
-
-        // Keep capture focused
-        capture.focus();
+        return { WORDS, SOLUTION, OPEN };
       }
 
-      function advanceInWord() {
-        if (activeCellIdx < activeWord.cells.length - 1) {
-          activateWord(activeWord, activeCellIdx + 1);
-        }
-      }
-
-      function retreatInWord() {
-        if (activeCellIdx > 0) {
-          activateWord(activeWord, activeCellIdx - 1);
-        }
-      }
-
-      // ─── CLICK HANDLER ────────────────────────────────────────────────────────────
-      function onCellClick(r, c) {
-        const starters = WORDS.filter(
-          (w) => w.cells[0].r === r && w.cells[0].c === c,
-        );
-
-        if (starters.length === 1) {
-          activateWord(starters[0], 0);
-          return;
-        }
-        if (starters.length > 1) {
-          // Only (0,0): default to 1A unless full and 1D isn't
-          const wa = starters.find((w) => w.dir === "across");
-          const wd = starters.find((w) => w.dir === "down");
-          if (wa && isWordFilled(wa) && wd && !isWordFilled(wd))
-            activateWord(wd, 0);
-          else activateWord(wa || starters[0], 0);
-          return;
-        }
-
-        // Mid-word cell: stay on current word if it contains this cell
-        const idxInCurrent = activeWord.cells.findIndex(
-          (cell) => cell.r === r && cell.c === c,
-        );
-        if (idxInCurrent !== -1) {
-          activateWord(activeWord, idxInCurrent);
-          return;
-        }
-
-        // Otherwise find any word that contains it
-        for (const w of WORDS) {
-          const idx = w.cells.findIndex((cell) => cell.r === r && cell.c === c);
-          if (idx !== -1) {
-            activateWord(w, idx);
-            return;
-          }
-        }
-      }
-
-      // ─── COMPLETION CHECK ─────────────────────────────────────────────────────────
-      function checkComplete() {
-        if (puzzleDone) return;
-
-        const allFilled = Object.keys(cellEl).every((key) => {
-          const [r, c] = key.split(",").map(Number);
-          return getVal(r, c) !== "";
-        });
-        if (!allFilled) return;
-
-        const allCorrect = Object.keys(cellEl).every((key) => {
-          const [r, c] = key.split(",").map(Number);
-          return getVal(r, c) === SOLUTION[r][c];
-        });
-
-        const errorEl = document.getElementById("error-msg");
-        const gridWrap = document.getElementById("grid-wrapper");
-
-        if (allCorrect) {
-          puzzleDone = true;
-          errorEl.classList.remove("show");
-          const secs = Math.round((Date.now() - startTime) / 1000);
-          const timeStr =
-            secs < 60
-              ? `in ${secs} second${secs === 1 ? "" : "s"}`
-              : `in ${Math.floor(secs / 60)}m ${secs % 60}s`;
-          document.getElementById("victory-time").textContent = timeStr;
-          document.getElementById("victory-overlay").classList.add("show");
-        } else {
-          errorEl.classList.add("show");
-          if (!hasShaken) {
-            hasShaken = true;
-            void gridWrap.offsetWidth;
-            gridWrap.classList.add("shake");
-            gridWrap.addEventListener(
-              "animationend",
-              () => gridWrap.classList.remove("shake"),
-              { once: true },
-            );
-          }
-        }
+      function showFetchError(url, err) {
+        document.getElementById("loading-state").style.display = "none";
+        const el = document.getElementById("fetch-error");
+        el.style.display = "block";
+        document.getElementById("fetch-error-url").textContent = url;
+        console.error("Puzzle load error:", err);
       }
 
       // ─── INIT ─────────────────────────────────────────────────────────────────────
-      activateWord(WORDS[0], 0);
+      loadPuzzle().then((data) => {
+        if (!data) return;
+        document.getElementById("loading-state").style.display = "none";
+        const container = document.getElementById("puzzle-container");
+        container.style.display = "flex";
+        initPuzzle(data.WORDS, data.SOLUTION, data.OPEN);
+      });
+
+      // ─── PUZZLE ENGINE ────────────────────────────────────────────────────────────
+      function initPuzzle(WORDS, SOLUTION, OPEN) {
+        let activeWord = WORDS[0];
+        let activeCellIdx = 0;
+        const gridValues = {};
+        let startTime = null;
+        let puzzleDone = false;
+        let hasShaken = false;
+
+        function getVal(r, c) {
+          return gridValues[`${r},${c}`] || "";
+        }
+        function setVal(r, c, letter) {
+          gridValues[`${r},${c}`] = letter;
+          const el = document.querySelector(
+            `.cell[data-r="${r}"][data-c="${c}"] .letter`,
+          );
+          if (el) el.textContent = letter;
+        }
+        function isWordFilled(word) {
+          return word.cells.every(({ r, c }) => getVal(r, c) !== "");
+        }
+
+        // ── BUILD GRID ──
+        const gridEl = document.getElementById("grid");
+        const cellEl = {};
+        const cellLabel = {};
+
+        // For each cell, prefer the across label; only use down if no across starts here.
+        // This matches standard crossword convention where shared cells take the across number.
+        WORDS.forEach((w) => {
+          const { r, c } = w.cells[0];
+          const key = `${r},${c}`;
+          if (!cellLabel[key] || w.dir === "across") cellLabel[key] = w.label;
+        });
+
+        for (let r = 0; r < 5; r++) {
+          for (let c = 0; c < 5; c++) {
+            const cell = document.createElement("div");
+            cell.classList.add("cell");
+            cell.dataset.r = r;
+            cell.dataset.c = c;
+
+            if (!OPEN[r][c]) {
+              cell.classList.add("blocked");
+              const img = document.createElement("img");
+              img.src = "pugg.webp";
+              img.alt = "";
+              cell.appendChild(img);
+            } else {
+              if (cellLabel[`${r},${c}`]) {
+                const num = document.createElement("span");
+                num.classList.add("num");
+                num.textContent = cellLabel[`${r},${c}`];
+                cell.appendChild(num);
+              }
+              const letter = document.createElement("div");
+              letter.classList.add("letter");
+              cell.appendChild(letter);
+
+              cell.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                onCellClick(r, c);
+              });
+              cell.addEventListener("touchend", (e) => {
+                e.preventDefault();
+                onCellClick(r, c);
+              });
+              cellEl[`${r},${c}`] = cell;
+            }
+
+            gridEl.appendChild(cell);
+          }
+        }
+
+        // ── BUILD CLUE LISTS ──
+        const clueEls = {};
+        WORDS.forEach((w) => {
+          const li = document.createElement("li");
+          li.innerHTML = `<span class="cn">${w.label}.</span>${w.clue}`;
+          li.addEventListener("click", () => activateWord(w, 0));
+          document
+            .getElementById(w.dir === "across" ? "clues-across" : "clues-down")
+            .appendChild(li);
+          clueEls[w.id] = li;
+        });
+
+        // ── CAPTURE INPUT ──
+        const capture = document.getElementById("capture");
+        capture.addEventListener("blur", () =>
+          setTimeout(() => capture.focus(), 50),
+        );
+
+        capture.addEventListener("keydown", (e) => {
+          if (e.key === "Backspace") {
+            e.preventDefault();
+            const { r, c } = activeWord.cells[activeCellIdx];
+            if (getVal(r, c)) {
+              setVal(r, c, "");
+            } else {
+              retreatInWord();
+              const prev = activeWord.cells[activeCellIdx];
+              setVal(prev.r, prev.c, "");
+            }
+            return;
+          }
+          if (e.key === "ArrowRight") {
+            e.preventDefault();
+            if (activeWord.dir === "across") advanceInWord();
+          }
+          if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            if (activeWord.dir === "across") retreatInWord();
+          }
+          if (e.key === "ArrowDown") {
+            e.preventDefault();
+            if (activeWord.dir === "down") advanceInWord();
+          }
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            if (activeWord.dir === "down") retreatInWord();
+          }
+        });
+
+        capture.addEventListener("input", (e) => {
+          const raw = e.data ?? capture.value;
+          capture.value = "";
+          const letter = (raw || "")
+            .replace(/[^a-zA-Z]/g, "")
+            .slice(-1)
+            .toUpperCase();
+          if (!letter) return;
+          if (!startTime) startTime = Date.now();
+          const { r, c } = activeWord.cells[activeCellIdx];
+          setVal(r, c, letter);
+          advanceInWord();
+          checkComplete();
+        });
+
+        document
+          .getElementById("grid-wrapper")
+          .addEventListener("mousedown", () => capture.focus());
+        capture.focus();
+
+        // ── ACTIVATE WORD ──
+        function activateWord(word, letterIdx) {
+          activeWord = word;
+          activeCellIdx = Math.max(
+            0,
+            Math.min(word.cells.length - 1, letterIdx),
+          );
+
+          Object.values(cellEl).forEach((el) =>
+            el.classList.remove("hl-word", "hl-active"),
+          );
+          word.cells.forEach(({ r, c }) => {
+            const el = cellEl[`${r},${c}`];
+            if (el) el.classList.add("hl-word");
+          });
+          const { r, c } = word.cells[activeCellIdx];
+          const el = cellEl[`${r},${c}`];
+          if (el) {
+            el.classList.remove("hl-word");
+            el.classList.add("hl-active");
+          }
+
+          Object.values(clueEls).forEach((li) => li.classList.remove("active"));
+          clueEls[word.id].classList.add("active");
+          capture.focus();
+        }
+
+        function advanceInWord() {
+          if (activeCellIdx < activeWord.cells.length - 1)
+            activateWord(activeWord, activeCellIdx + 1);
+        }
+        function retreatInWord() {
+          if (activeCellIdx > 0) activateWord(activeWord, activeCellIdx - 1);
+        }
+
+        // ── CLICK HANDLER ──
+        function onCellClick(r, c) {
+          const starters = WORDS.filter(
+            (w) => w.cells[0].r === r && w.cells[0].c === c,
+          );
+          if (starters.length === 1) {
+            activateWord(starters[0], 0);
+            return;
+          }
+          if (starters.length > 1) {
+            const wa = starters.find((w) => w.dir === "across");
+            const wd = starters.find((w) => w.dir === "down");
+            if (wa && isWordFilled(wa) && wd && !isWordFilled(wd))
+              activateWord(wd, 0);
+            else activateWord(wa || starters[0], 0);
+            return;
+          }
+          const idxInCurrent = activeWord.cells.findIndex(
+            (cell) => cell.r === r && cell.c === c,
+          );
+          if (idxInCurrent !== -1) {
+            activateWord(activeWord, idxInCurrent);
+            return;
+          }
+          for (const w of WORDS) {
+            const idx = w.cells.findIndex(
+              (cell) => cell.r === r && cell.c === c,
+            );
+            if (idx !== -1) {
+              activateWord(w, idx);
+              return;
+            }
+          }
+        }
+
+        // ── COMPLETION CHECK ──
+        function checkComplete() {
+          if (puzzleDone) return;
+          const allFilled = Object.keys(cellEl).every((key) => {
+            const [r, c] = key.split(",").map(Number);
+            return getVal(r, c) !== "";
+          });
+          if (!allFilled) return;
+
+          const allCorrect = Object.keys(cellEl).every((key) => {
+            const [r, c] = key.split(",").map(Number);
+            return getVal(r, c) === SOLUTION[r][c];
+          });
+
+          const errorEl = document.getElementById("error-msg");
+          const gridWrap = document.getElementById("grid-wrapper");
+
+          if (allCorrect) {
+            puzzleDone = true;
+            errorEl.classList.remove("show");
+            const secs = Math.round((Date.now() - startTime) / 1000);
+            const timeStr =
+              secs < 60
+                ? `in ${secs} second${secs === 1 ? "" : "s"}`
+                : `in ${Math.floor(secs / 60)}m ${secs % 60}s`;
+            document.getElementById("victory-time").textContent = timeStr;
+            document.getElementById("victory-overlay").classList.add("show");
+          } else {
+            errorEl.classList.add("show");
+            if (!hasShaken) {
+              hasShaken = true;
+              void gridWrap.offsetWidth;
+              gridWrap.classList.add("shake");
+              gridWrap.addEventListener(
+                "animationend",
+                () => gridWrap.classList.remove("shake"),
+                { once: true },
+              );
+            }
+          }
+        }
+
+        // ── START ──
+        activateWord(WORDS[0], 0);
+      }
     </script>
   </body>
 </html>
