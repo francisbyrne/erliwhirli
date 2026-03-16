@@ -365,6 +365,8 @@
         background: var(--accent);
       }
     </style>
+
+    <script src="settings.js"></script>
   </head>
   <body>
     <header>
@@ -454,8 +456,6 @@
       // 3. If your puzzle is on a specific tab, set SHEET_GID to that tab's gid
       //    (visible in the URL bar when you click the tab), otherwise leave as "0".
       //
-      const SHEET_ID = "1WnNEgj1pwetAm6Cu2ZCyIJfAoldQFqOiTPHb914qkhs";
-      const SHEET_GID = "0";
 
       // ─── GOOGLE SHEET FORMAT ──────────────────────────────────────────────────────
       //
@@ -478,7 +478,7 @@
 
       // ─── FETCH & PARSE ────────────────────────────────────────────────────────────
       // Uses the gviz/tq JSONP endpoint — no CORS issues, no server needed.
-      function loadPuzzle() {
+      function loadPuzzle(SHEET_ID, SHEET_GID) {
         return new Promise((resolve) => {
           const callbackName = "_sheetCallback_" + Date.now();
           const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:${callbackName}&gid=${SHEET_GID}`;
@@ -597,7 +597,9 @@
       }
 
       // ─── INIT ─────────────────────────────────────────────────────────────────────
-      loadPuzzle().then((data) => {
+      // Pull the environment variables in from a settings file
+      const { sheetId, sheetGid } = window.CROSSWORD_SETTINGS;
+      loadPuzzle(sheetId, sheetGid).then((data) => {
         if (!data) return;
         document.getElementById("loading-state").style.display = "none";
         const container = document.getElementById("puzzle-container");
