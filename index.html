@@ -361,6 +361,7 @@
         max-width: 360px;
         width: calc(100% - 48px);
         animation: rise 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        position: relative;
       }
       @keyframes rise {
         from {
@@ -449,21 +450,27 @@
         min-height: 1em;
       }
 
-      .victory-card .dismiss {
-        margin-top: 24px;
-        background: var(--ink);
-        color: var(--paper);
+      /* ── SHARED DIALOG CLOSE BUTTON (×) ── */
+      .dialog-close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
         border: none;
-        padding: 10px 28px;
-        font-family: "Source Serif 4", serif;
-        font-size: 0.85rem;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
         cursor: pointer;
-        transition: background 0.15s;
+        color: #8a7060;
+        font-size: 1.2rem;
+        line-height: 1;
+        transition: color 0.15s;
+        padding: 0;
       }
-      .victory-card .dismiss:hover {
-        background: var(--accent);
+      .dialog-close:hover {
+        color: var(--accent);
       }
 
       /* ── VICTORY CARD BUTTON ROW ── */
@@ -473,10 +480,6 @@
         gap: 10px;
         justify-content: center;
         flex-wrap: wrap;
-      }
-      .victory-btn-row .dismiss,
-      .victory-btn-row .leaderboard-btn {
-        margin-top: 0;
       }
       .victory-card .leaderboard-btn {
         background: transparent;
@@ -524,6 +527,7 @@
         max-width: 360px;
         width: calc(100% - 48px);
         animation: rise 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+        position: relative;
       }
       .leaderboard-card h2 {
         font-family: "Playfair Display", serif;
@@ -662,6 +666,7 @@
         max-width: 320px;
         width: calc(100% - 48px);
         animation: rise 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        position: relative;
       }
       .name-modal h3 {
         font-family: "Playfair Display", serif;
@@ -709,18 +714,6 @@
         color: var(--accent);
         margin-top: 6px;
         min-height: 1em;
-      }
-      .name-modal .cancel-link {
-        display: inline-block;
-        margin-top: 14px;
-        font-size: 0.78rem;
-        color: #8a7060;
-        cursor: pointer;
-        text-decoration: underline;
-        text-underline-offset: 2px;
-      }
-      .name-modal .cancel-link:hover {
-        color: var(--accent);
       }
     </style>
 
@@ -793,6 +786,9 @@
     <!-- Victory overlay -->
     <div class="victory-overlay" id="victory-overlay">
       <div class="victory-card">
+        <button class="dialog-close" id="victory-dismiss" aria-label="Close">
+          ✕
+        </button>
         <div class="trophy">✦</div>
         <h2 id="victory-heading">Puzzle Complete!</h2>
         <p id="victory-message">Congratulations, you completed the puzzle</p>
@@ -824,7 +820,6 @@
           <button class="leaderboard-btn" id="victory-leaderboard-btn">
             Leaderboard
           </button>
-          <button class="dismiss" id="victory-dismiss">Close</button>
         </div>
       </div>
     </div>
@@ -832,12 +827,12 @@
     <!-- Leaderboard overlay -->
     <div class="leaderboard-overlay" id="leaderboard-overlay">
       <div class="leaderboard-card">
+        <button class="dialog-close" id="lb-close" aria-label="Close">✕</button>
         <h2>Leaderboard</h2>
         <div class="lb-subtitle">Top 10 fastest times</div>
         <div id="lb-body"><div class="lb-loading">Loading…</div></div>
         <div class="lb-btn-row">
           <button class="lb-refresh" id="lb-refresh">↻ Refresh</button>
-          <button class="lb-close" id="lb-close">Close</button>
         </div>
       </div>
     </div>
@@ -845,6 +840,9 @@
     <!-- Name edit modal (opened from corner badge) -->
     <div class="name-modal-overlay" id="name-modal-overlay">
       <div class="name-modal">
+        <button class="dialog-close" id="modal-name-cancel" aria-label="Close">
+          ✕
+        </button>
         <h3>Change your name</h3>
         <div class="name-input-row">
           <input
@@ -859,7 +857,6 @@
           <button class="save-name-btn" id="modal-name-save">Save</button>
         </div>
         <div class="name-error" id="modal-name-error"></div>
-        <span class="cancel-link" id="modal-name-cancel">Cancel</span>
       </div>
     </div>
 
@@ -1274,6 +1271,15 @@
             document
               .getElementById("leaderboard-overlay")
               .classList.remove("show");
+        });
+      document
+        .getElementById("victory-overlay")
+        .addEventListener("click", (e) => {
+          if (e.target === document.getElementById("victory-overlay")) {
+            document.getElementById("victory-overlay").classList.remove("show");
+            capturePaused = false;
+            document.getElementById("capture").focus();
+          }
         });
 
       loadPuzzle(sheetId, sheetGid).then((data) => {
