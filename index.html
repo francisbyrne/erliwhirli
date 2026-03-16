@@ -496,6 +496,10 @@
         background: var(--ink);
         color: var(--paper);
       }
+      .victory-card .leaderboard-btn:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
 
       /* ── LEADERBOARD OVERLAY ── */
       .leaderboard-overlay {
@@ -595,21 +599,44 @@
       .lb-table tr:last-child td {
         border-bottom: none;
       }
-      .leaderboard-card .lb-close {
+      .leaderboard-card .lb-btn-row {
         margin-top: 24px;
-        background: var(--ink);
-        color: var(--paper);
-        border: none;
-        padding: 10px 28px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+      }
+      .leaderboard-card .lb-close,
+      .leaderboard-card .lb-refresh {
+        padding: 10px 22px;
         font-family: "Source Serif 4", serif;
         font-size: 0.85rem;
         letter-spacing: 0.1em;
         text-transform: uppercase;
         cursor: pointer;
-        transition: background 0.15s;
+        transition:
+          background 0.15s,
+          color 0.15s;
+        border: none;
+      }
+      .leaderboard-card .lb-close {
+        background: var(--ink);
+        color: var(--paper);
       }
       .leaderboard-card .lb-close:hover {
         background: var(--accent);
+      }
+      .leaderboard-card .lb-refresh {
+        background: transparent;
+        color: var(--ink);
+        border: 2px solid var(--ink);
+      }
+      .leaderboard-card .lb-refresh:hover {
+        background: var(--ink);
+        color: var(--paper);
+      }
+      .leaderboard-card .lb-refresh:disabled {
+        opacity: 0.45;
+        cursor: default;
       }
 
       /* ── NAME EDIT MODAL ── */
@@ -797,6 +824,7 @@
           <button class="leaderboard-btn" id="victory-leaderboard-btn">
             Leaderboard
           </button>
+          <button class="dismiss" id="victory-dismiss">Close</button>
         </div>
       </div>
     </div>
@@ -807,7 +835,10 @@
         <h2>Leaderboard</h2>
         <div class="lb-subtitle">Top 10 fastest times</div>
         <div id="lb-body"><div class="lb-loading">Loading…</div></div>
-        <button class="lb-close" id="lb-close">Close</button>
+        <div class="lb-btn-row">
+          <button class="lb-refresh" id="lb-refresh">↻ Refresh</button>
+          <button class="lb-close" id="lb-close">Close</button>
+        </div>
       </div>
     </div>
 
@@ -1082,12 +1113,14 @@
 
       // ─── LEADERBOARD ──────────────────────────────────────────────────────────────
 
-      // Submit a score to the Apps Script web app (fire-and-forget).
+      // Submit a score via JSONP (avoids CORS issues with Apps Script).
+      // Returns a Promise that resolves true/false once the sheet confirms.
       function submitScore(name, timeSeconds) {
         return new Promise((resolve) => {
           const callbackName = "_submitCallback_" + Date.now();
           const url =
-            `${LEADERBOARD_POST_URL}?callback=${callbackName}` +
+            `${LEADERBOARD_POST_URL}` +
+            `?callback=${encodeURIComponent(callbackName)}` +
             `&name=${encodeURIComponent(name)}` +
             `&time_seconds=${encodeURIComponent(timeSeconds)}`;
 
@@ -1118,11 +1151,21 @@
       }
 
       // Fetch and display the top-10 leaderboard using the same JSONP trick.
+      // Call with a highlightName to bold the current player's row.
+      let _lbHighlightName = null;
+
       function showLeaderboard(highlightName) {
+        _lbHighlightName = highlightName || null;
         const overlay = document.getElementById("leaderboard-overlay");
-        const body = document.getElementById("lb-body");
-        body.innerHTML = '<div class="lb-loading">Loading…</div>';
         overlay.classList.add("show");
+        loadLeaderboard();
+      }
+
+      function loadLeaderboard() {
+        const body = document.getElementById("lb-body");
+        const refreshBtn = document.getElementById("lb-refresh");
+        body.innerHTML = '<div class="lb-loading">Loading…</div>';
+        refreshBtn.disabled = true;
 
         const callbackName = "_lbCallback_" + Date.now();
         const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json;responseHandler:${callbackName}&gid=${LEADERBOARD_GID}`;
@@ -1131,6 +1174,7 @@
           cleanup();
           body.innerHTML =
             '<div class="lb-error">Couldn\'t load the leaderboard — timed out.</div>';
+          refreshBtn.disabled = false;
         }, 10000);
 
         function cleanup() {
@@ -1141,6 +1185,7 @@
 
         window[callbackName] = function (json) {
           cleanup();
+          refreshBtn.disabled = false;
           try {
             const rows = json.table.rows;
             if (!rows || rows.length === 0) {
@@ -1172,8 +1217,8 @@
             const rows_html = entries
               .map((e, i) => {
                 const isMe =
-                  highlightName &&
-                  e.name.toLowerCase() === highlightName.toLowerCase();
+                  _lbHighlightName &&
+                  e.name.toLowerCase() === _lbHighlightName.toLowerCase();
                 const rank = medals[i] ?? `${i + 1}`;
                 return `<tr class="${isMe ? "lb-me" : ""}">
                 <td>${rank}</td>
@@ -1200,6 +1245,7 @@
         const script = document.createElement("script");
         script.onerror = () => {
           cleanup();
+          refreshBtn.disabled = false;
           body.innerHTML =
             '<div class="lb-error">Couldn\'t load the leaderboard.</div>';
         };
@@ -1207,6 +1253,9 @@
         document.head.appendChild(script);
       }
 
+      document
+        .getElementById("lb-refresh")
+        .addEventListener("click", loadLeaderboard);
       document.getElementById("lb-close").addEventListener("click", () => {
         document.getElementById("leaderboard-overlay").classList.remove("show");
       });
@@ -1506,7 +1555,12 @@
             heading.textContent = `Well done, ${existingName}!`;
             message.textContent = "Another puzzle conquered.";
             namePrompt.style.display = "none";
-            submitScore(existingName, secs);
+            lbBtn.disabled = true;
+            lbBtn.textContent = "Submitting…";
+            submitScore(existingName, secs).then(() => {
+              lbBtn.disabled = false;
+              lbBtn.textContent = "Leaderboard";
+            });
           } else {
             // First-time player — prompt for name
             heading.textContent = "Puzzle Complete!";
@@ -1528,7 +1582,12 @@
               return;
             }
             savePlayerName(val);
-            submitScore(val, secs);
+            lbBtn.disabled = true;
+            lbBtn.textContent = "Submitting…";
+            submitScore(val, secs).then(() => {
+              lbBtn.disabled = false;
+              lbBtn.textContent = "Leaderboard";
+            });
             heading.textContent = `Welcome, ${val}!`;
             message.textContent =
               "Your score has been submitted to the leaderboard.";
