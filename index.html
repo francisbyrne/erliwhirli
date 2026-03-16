@@ -871,6 +871,14 @@
 
       // ─── PLAYER NAME ──────────────────────────────────────────────────────────────
       const LS_KEY = "crossword_player_name";
+      const LS_SUBMITTED_KEY = "crossword_submitted";
+
+      function hasSubmitted() {
+        return localStorage.getItem(LS_SUBMITTED_KEY) === "1";
+      }
+      function markSubmitted() {
+        localStorage.setItem(LS_SUBMITTED_KEY, "1");
+      }
 
       function getPlayerName() {
         return localStorage.getItem(LS_KEY) || null;
@@ -1551,16 +1559,25 @@
           document.getElementById("victory-time").textContent = timeStr;
 
           if (existingName) {
-            // Returning player — greet by name, submit score immediately
+            // Returning player — greet by name
             heading.textContent = `Well done, ${existingName}!`;
             message.textContent = "Another puzzle conquered.";
             namePrompt.style.display = "none";
-            lbBtn.disabled = true;
-            lbBtn.textContent = "Submitting…";
-            submitScore(existingName, secs).then(() => {
+            if (hasSubmitted()) {
+              // Already submitted this week — don't submit again
+              message.textContent =
+                "You've already submitted a score this week — only your first attempt counts.";
               lbBtn.disabled = false;
               lbBtn.textContent = "Leaderboard";
-            });
+            } else {
+              lbBtn.disabled = true;
+              lbBtn.textContent = "Submitting…";
+              submitScore(existingName, secs).then(() => {
+                markSubmitted();
+                lbBtn.disabled = false;
+                lbBtn.textContent = "Leaderboard";
+              });
+            }
           } else {
             // First-time player — prompt for name
             heading.textContent = "Puzzle Complete!";
@@ -1585,6 +1602,7 @@
             lbBtn.disabled = true;
             lbBtn.textContent = "Submitting…";
             submitScore(val, secs).then(() => {
+              markSubmitted();
               lbBtn.disabled = false;
               lbBtn.textContent = "Leaderboard";
             });
