@@ -36,6 +36,50 @@
         padding: 40px 20px 60px;
       }
 
+      /* ── PLAYER NAME (top-right) ── */
+      #player-name-corner {
+        position: fixed;
+        top: 14px;
+        right: 18px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        z-index: 50;
+        padding: 4px 8px;
+        border-radius: 3px;
+        transition: background 0.15s;
+        /* subtle dashed underline to hint editability */
+        border-bottom: 1.5px dashed #c9b99a;
+      }
+      #player-name-corner:hover {
+        background: rgba(181, 69, 27, 0.07);
+        border-bottom-color: var(--accent);
+      }
+      #player-name-corner .pn-label {
+        font-family: "Source Serif 4", serif;
+        font-size: 0.78rem;
+        letter-spacing: 0.12em;
+        color: #8a7060;
+        text-transform: uppercase;
+      }
+      #player-name-corner .pn-name {
+        font-family: "Playfair Display", serif;
+        font-size: 0.9rem;
+        color: var(--ink);
+      }
+      #player-name-corner .pn-edit-icon {
+        opacity: 0;
+        transition: opacity 0.15s;
+        color: var(--accent);
+        font-size: 0.8rem;
+        line-height: 1;
+        /* pencil via unicode */
+      }
+      #player-name-corner:hover .pn-edit-icon {
+        opacity: 1;
+      }
+
       header {
         text-align: center;
         margin-bottom: 36px;
@@ -314,7 +358,8 @@
         border: 3px solid var(--ink);
         padding: 44px 52px;
         text-align: center;
-        max-width: 340px;
+        max-width: 360px;
+        width: calc(100% - 48px);
         animation: rise 0.4s cubic-bezier(0.22, 1, 0.36, 1);
       }
       @keyframes rise {
@@ -348,6 +393,62 @@
         margin-top: 10px;
         display: block;
       }
+
+      /* ── NAME PROMPT (inside victory card) ── */
+      .victory-name-prompt {
+        margin-top: 22px;
+        padding-top: 20px;
+        border-top: 1px solid #c9b99a;
+      }
+      .victory-name-prompt p {
+        font-size: 0.82rem;
+        color: #8a7060;
+        letter-spacing: 0.08em;
+        margin-bottom: 12px;
+      }
+      .victory-name-prompt .name-input-row {
+        display: flex;
+        gap: 8px;
+      }
+      .victory-name-prompt input[type="text"] {
+        flex: 1;
+        font-family: "Source Serif 4", serif;
+        font-size: 0.9rem;
+        padding: 8px 12px;
+        border: 2px solid #c9b99a;
+        background: #fff;
+        color: var(--ink);
+        outline: none;
+        transition: border-color 0.15s;
+        min-width: 0;
+      }
+      .victory-name-prompt input[type="text"]:focus {
+        border-color: var(--accent);
+      }
+      .victory-name-prompt button.save-name-btn {
+        background: var(--ink);
+        color: var(--paper);
+        border: none;
+        padding: 8px 18px;
+        font-family: "Source Serif 4", serif;
+        font-size: 0.82rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: background 0.15s;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .victory-name-prompt button.save-name-btn:hover {
+        background: var(--accent);
+      }
+      .victory-name-prompt .name-error {
+        font-size: 0.75rem;
+        color: var(--accent);
+        margin-top: 6px;
+        min-height: 1em;
+      }
+
       .victory-card .dismiss {
         margin-top: 24px;
         background: var(--ink);
@@ -364,11 +465,102 @@
       .victory-card .dismiss:hover {
         background: var(--accent);
       }
+
+      /* ── NAME EDIT MODAL ── */
+      .name-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(26, 16, 8, 0.45);
+        backdrop-filter: blur(2px);
+        z-index: 200;
+        align-items: center;
+        justify-content: center;
+      }
+      .name-modal-overlay.show {
+        display: flex;
+        animation: fade-in 0.2s ease;
+      }
+      .name-modal {
+        background: var(--paper);
+        border: 3px solid var(--ink);
+        padding: 36px 44px;
+        text-align: center;
+        max-width: 320px;
+        width: calc(100% - 48px);
+        animation: rise 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .name-modal h3 {
+        font-family: "Playfair Display", serif;
+        font-size: 1.15rem;
+        margin-bottom: 18px;
+      }
+      .name-modal .name-input-row {
+        display: flex;
+        gap: 8px;
+      }
+      .name-modal input[type="text"] {
+        flex: 1;
+        font-family: "Source Serif 4", serif;
+        font-size: 0.9rem;
+        padding: 8px 12px;
+        border: 2px solid #c9b99a;
+        background: #fff;
+        color: var(--ink);
+        outline: none;
+        transition: border-color 0.15s;
+        min-width: 0;
+      }
+      .name-modal input[type="text"]:focus {
+        border-color: var(--accent);
+      }
+      .name-modal button.save-name-btn {
+        background: var(--ink);
+        color: var(--paper);
+        border: none;
+        padding: 8px 18px;
+        font-family: "Source Serif 4", serif;
+        font-size: 0.82rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: background 0.15s;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .name-modal button.save-name-btn:hover {
+        background: var(--accent);
+      }
+      .name-modal .name-error {
+        font-size: 0.75rem;
+        color: var(--accent);
+        margin-top: 6px;
+        min-height: 1em;
+      }
+      .name-modal .cancel-link {
+        display: inline-block;
+        margin-top: 14px;
+        font-size: 0.78rem;
+        color: #8a7060;
+        cursor: pointer;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .name-modal .cancel-link:hover {
+        color: var(--accent);
+      }
     </style>
 
     <script src="settings.js"></script>
   </head>
   <body>
+    <!-- Player name corner badge -->
+    <div id="player-name-corner" style="display: none" title="Edit your name">
+      <span class="pn-label">Playing as</span>
+      <span class="pn-name" id="pn-name-text"></span>
+      <span class="pn-edit-icon">✎</span>
+    </div>
+
     <header>
       <h1>Erly Whirly Thirsdly Mini</h1>
       <div class="byline">Thursday's Mini Crossword</div>
@@ -425,24 +617,149 @@
       </div>
     </div>
 
+    <!-- Victory overlay -->
     <div class="victory-overlay" id="victory-overlay">
       <div class="victory-card">
         <div class="trophy">✦</div>
-        <h2>Puzzle Complete!</h2>
-        <p>Congratulations, you completed the puzzle</p>
+        <h2 id="victory-heading">Puzzle Complete!</h2>
+        <p id="victory-message">Congratulations, you completed the puzzle</p>
         <span class="time" id="victory-time"></span>
-        <button
-          class="dismiss"
-          onclick="
-            document.getElementById('victory-overlay').classList.remove('show')
-          "
+
+        <!-- Name prompt — shown only for first-time players -->
+        <div
+          class="victory-name-prompt"
+          id="victory-name-prompt"
+          style="display: none"
         >
-          Close
-        </button>
+          <p>Enter your name to appear on the leaderboard:</p>
+          <div class="name-input-row">
+            <input
+              type="text"
+              id="victory-name-input"
+              maxlength="32"
+              autocomplete="off"
+              autocorrect="off"
+              spellcheck="false"
+              placeholder="Your name"
+            />
+            <button class="save-name-btn" id="victory-name-save">Save</button>
+          </div>
+          <div class="name-error" id="victory-name-error"></div>
+        </div>
+
+        <button class="dismiss" id="victory-dismiss">Close</button>
+      </div>
+    </div>
+
+    <!-- Name edit modal (opened from corner badge) -->
+    <div class="name-modal-overlay" id="name-modal-overlay">
+      <div class="name-modal">
+        <h3>Change your name</h3>
+        <div class="name-input-row">
+          <input
+            type="text"
+            id="modal-name-input"
+            maxlength="32"
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="false"
+            placeholder="Your name"
+          />
+          <button class="save-name-btn" id="modal-name-save">Save</button>
+        </div>
+        <div class="name-error" id="modal-name-error"></div>
+        <span class="cancel-link" id="modal-name-cancel">Cancel</span>
       </div>
     </div>
 
     <script>
+      // ─── SHARED STATE ─────────────────────────────────────────────────────────────
+      // Controls whether the hidden capture input auto-refocuses on blur.
+      // Set to true whenever a name text field should hold focus.
+      let capturePaused = false;
+
+      // ─── PLAYER NAME ──────────────────────────────────────────────────────────────
+      const LS_KEY = "crossword_player_name";
+
+      function getPlayerName() {
+        return localStorage.getItem(LS_KEY) || null;
+      }
+
+      function savePlayerName(name) {
+        localStorage.setItem(LS_KEY, name);
+        renderNameCorner(name);
+      }
+
+      function renderNameCorner(name) {
+        const corner = document.getElementById("player-name-corner");
+        const nameText = document.getElementById("pn-name-text");
+        if (name) {
+          nameText.textContent = name;
+          corner.style.display = "flex";
+        } else {
+          corner.style.display = "none";
+        }
+      }
+
+      // Corner badge — click to edit
+      document
+        .getElementById("player-name-corner")
+        .addEventListener("click", () => {
+          openNameModal();
+        });
+
+      function openNameModal() {
+        const input = document.getElementById("modal-name-input");
+        input.value = getPlayerName() || "";
+        document.getElementById("modal-name-error").textContent = "";
+        document.getElementById("name-modal-overlay").classList.add("show");
+        // Pause capture auto-refocus so typing goes into the text field
+        capturePaused = true;
+        setTimeout(() => input.focus(), 50);
+      }
+
+      function closeNameModal() {
+        document.getElementById("name-modal-overlay").classList.remove("show");
+        capturePaused = false;
+        document.getElementById("capture").focus();
+      }
+
+      document
+        .getElementById("modal-name-save")
+        .addEventListener("click", () => {
+          const val = document.getElementById("modal-name-input").value.trim();
+          if (!val) {
+            document.getElementById("modal-name-error").textContent =
+              "Please enter a name.";
+            return;
+          }
+          savePlayerName(val);
+          closeNameModal();
+        });
+
+      document
+        .getElementById("modal-name-input")
+        .addEventListener("keydown", (e) => {
+          if (e.key === "Enter")
+            document.getElementById("modal-name-save").click();
+          if (e.key === "Escape") closeNameModal();
+        });
+
+      document
+        .getElementById("modal-name-cancel")
+        .addEventListener("click", closeNameModal);
+
+      // Close modal if clicking outside the card
+      document
+        .getElementById("name-modal-overlay")
+        .addEventListener("click", (e) => {
+          if (e.target === document.getElementById("name-modal-overlay"))
+            closeNameModal();
+        });
+
+      // ── Initialise corner on page load ──
+      renderNameCorner(getPlayerName());
+
       // ─── CONFIGURATION ────────────────────────────────────────────────────────────
       //
       // 1. Share your Google Sheet publicly:
@@ -696,9 +1013,14 @@
 
         // ── CAPTURE INPUT ──
         const capture = document.getElementById("capture");
-        capture.addEventListener("blur", () =>
-          setTimeout(() => capture.focus(), 50),
-        );
+
+        // When a name input is open we want focus to stay there, not snap back
+        // to the hidden capture field. Set this flag to true to pause the
+        // auto-refocus behaviour.
+
+        capture.addEventListener("blur", () => {
+          if (!capturePaused) setTimeout(() => capture.focus(), 50);
+        });
 
         capture.addEventListener("keydown", (e) => {
           if (e.key === "Backspace") {
@@ -846,8 +1168,8 @@
               secs < 60
                 ? `in ${secs} second${secs === 1 ? "" : "s"}`
                 : `in ${Math.floor(secs / 60)}m ${secs % 60}s`;
-            document.getElementById("victory-time").textContent = timeStr;
-            document.getElementById("victory-overlay").classList.add("show");
+
+            showVictory(timeStr);
           } else {
             errorEl.classList.add("show");
             if (!hasShaken) {
@@ -861,6 +1183,65 @@
               );
             }
           }
+        }
+
+        // ── VICTORY DIALOG ──
+        function showVictory(timeStr) {
+          const existingName = getPlayerName();
+          const heading = document.getElementById("victory-heading");
+          const message = document.getElementById("victory-message");
+          const namePrompt = document.getElementById("victory-name-prompt");
+          const nameInput = document.getElementById("victory-name-input");
+          const nameError = document.getElementById("victory-name-error");
+          const dismissBtn = document.getElementById("victory-dismiss");
+
+          document.getElementById("victory-time").textContent = timeStr;
+
+          if (existingName) {
+            // Returning player — greet by name
+            heading.textContent = `Well done, ${existingName}!`;
+            message.textContent = "Another puzzle conquered.";
+            namePrompt.style.display = "none";
+          } else {
+            // First-time player — prompt for name
+            heading.textContent = "Puzzle Complete!";
+            message.textContent = "Congratulations, you completed the puzzle";
+            namePrompt.style.display = "block";
+            nameInput.value = "";
+            nameError.textContent = "";
+            // Pause capture auto-refocus so typing goes into name field
+            capturePaused = true;
+            setTimeout(() => nameInput.focus(), 350); // wait for card animation
+          }
+
+          document.getElementById("victory-overlay").classList.add("show");
+
+          // Save-name button inside victory card
+          document.getElementById("victory-name-save").onclick = () => {
+            const val = nameInput.value.trim();
+            if (!val) {
+              nameError.textContent = "Please enter a name.";
+              return;
+            }
+            savePlayerName(val);
+            // Update dialog to congratulate by name
+            heading.textContent = `Welcome, ${val}!`;
+            message.textContent =
+              "Your name has been saved for the leaderboard.";
+            namePrompt.style.display = "none";
+            capturePaused = false;
+          };
+
+          nameInput.onkeydown = (e) => {
+            if (e.key === "Enter")
+              document.getElementById("victory-name-save").click();
+          };
+
+          dismissBtn.onclick = () => {
+            document.getElementById("victory-overlay").classList.remove("show");
+            capturePaused = false;
+            document.getElementById("capture").focus();
+          };
         }
 
         // ── START ──
