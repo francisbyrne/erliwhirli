@@ -83,6 +83,7 @@
       header {
         text-align: center;
         margin-bottom: 36px;
+        position: relative;
       }
       header h1 {
         font-family: "Playfair Display", Georgia, serif;
@@ -95,6 +96,28 @@
         font-size: 0.78rem;
         letter-spacing: 0.25em;
         text-transform: uppercase;
+        color: var(--accent);
+      }
+      #header-leaderboard-btn {
+        margin-top: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: none;
+        border: 1.5px solid #c9b99a;
+        color: #8a7060;
+        font-family: "Source Serif 4", serif;
+        font-size: 0.72rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        padding: 5px 14px;
+        cursor: pointer;
+        transition:
+          border-color 0.15s,
+          color 0.15s;
+      }
+      #header-leaderboard-btn:hover {
+        border-color: var(--accent);
         color: var(--accent);
       }
 
@@ -730,6 +753,7 @@
     <header>
       <h1>Erly Whirly Thirsdly Mini</h1>
       <div class="byline">Thursday's Mini Crossword</div>
+      <button id="header-leaderboard-btn">⟑ Leaderboard</button>
     </header>
 
     <!-- Loading state -->
@@ -1261,6 +1285,11 @@
       document
         .getElementById("lb-refresh")
         .addEventListener("click", loadLeaderboard);
+      document
+        .getElementById("header-leaderboard-btn")
+        .addEventListener("click", () => {
+          showLeaderboard(getPlayerName());
+        });
       document.getElementById("lb-close").addEventListener("click", () => {
         document.getElementById("leaderboard-overlay").classList.remove("show");
       });
