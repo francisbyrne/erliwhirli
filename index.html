@@ -1512,36 +1512,52 @@
 
         // ── CLICK HANDLER ──
         function onCellClick(r, c) {
-          const starters = WORDS.filter(
-            (w) => w.cells[0].r === r && w.cells[0].c === c,
+          // Find all words that pass through this cell
+          const wordsHere = WORDS.filter((w) =>
+            w.cells.some((cell) => cell.r === r && cell.c === c),
           );
-          if (starters.length === 1) {
-            activateWord(starters[0], 0);
-            return;
-          }
-          if (starters.length > 1) {
-            const wa = starters.find((w) => w.dir === "across");
-            const wd = starters.find((w) => w.dir === "down");
-            if (wa && isWordFilled(wa) && wd && !isWordFilled(wd))
-              activateWord(wd, 0);
-            else activateWord(wa || starters[0], 0);
-            return;
-          }
+          const acrossWord = wordsHere.find((w) => w.dir === "across");
+          const downWord = wordsHere.find((w) => w.dir === "down");
+
+          // If the clicked cell is already part of the active word,
+          // toggle to the other direction (if one exists at this cell).
           const idxInCurrent = activeWord.cells.findIndex(
             (cell) => cell.r === r && cell.c === c,
           );
           if (idxInCurrent !== -1) {
-            activateWord(activeWord, idxInCurrent);
+            const other = activeWord.dir === "across" ? downWord : acrossWord;
+            if (other) {
+              const idxInOther = other.cells.findIndex(
+                (cell) => cell.r === r && cell.c === c,
+              );
+              activateWord(other, idxInOther);
+            } else {
+              // No crossing word — just move cursor to this cell
+              activateWord(activeWord, idxInCurrent);
+            }
             return;
           }
-          for (const w of WORDS) {
+
+          // Cell is not in the active word — pick the best word to activate.
+          if (acrossWord && downWord) {
+            // Prefer across unless it's already filled and down isn't
+            if (isWordFilled(acrossWord) && !isWordFilled(downWord)) {
+              const idx = downWord.cells.findIndex(
+                (cell) => cell.r === r && cell.c === c,
+              );
+              activateWord(downWord, idx);
+            } else {
+              const idx = acrossWord.cells.findIndex(
+                (cell) => cell.r === r && cell.c === c,
+              );
+              activateWord(acrossWord, idx);
+            }
+          } else if (acrossWord || downWord) {
+            const w = acrossWord || downWord;
             const idx = w.cells.findIndex(
               (cell) => cell.r === r && cell.c === c,
             );
-            if (idx !== -1) {
-              activateWord(w, idx);
-              return;
-            }
+            activateWord(w, idx);
           }
         }
 
