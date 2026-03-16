@@ -890,13 +890,20 @@
 
       // ─── PLAYER NAME ──────────────────────────────────────────────────────────────
       const LS_KEY = "crossword_player_name";
-      const LS_SUBMITTED_KEY = "crossword_submitted";
+      const LS_USER_ID_KEY = "crossword_user_id";
 
-      function hasSubmitted() {
-        return localStorage.getItem(LS_SUBMITTED_KEY) === "1";
-      }
-      function markSubmitted() {
-        localStorage.setItem(LS_SUBMITTED_KEY, "1");
+      function getUserId() {
+        let id = localStorage.getItem(LS_USER_ID_KEY);
+        if (!id) {
+          id = crypto.randomUUID
+            ? crypto.randomUUID()
+            : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+                const r = (Math.random() * 16) | 0;
+                return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+              });
+          localStorage.setItem(LS_USER_ID_KEY, id);
+        }
+        return id;
       }
 
       function getPlayerName() {
@@ -1149,7 +1156,8 @@
             `${LEADERBOARD_POST_URL}` +
             `?callback=${encodeURIComponent(callbackName)}` +
             `&name=${encodeURIComponent(name)}` +
-            `&time_seconds=${encodeURIComponent(timeSeconds)}`;
+            `&time_seconds=${encodeURIComponent(timeSeconds)}` +
+            `&user_id=${encodeURIComponent(getUserId())}`;
 
           const timeout = setTimeout(() => {
             delete window[callbackName];
@@ -1162,7 +1170,8 @@
             clearTimeout(timeout);
             delete window[callbackName];
             if (script.parentNode) script.parentNode.removeChild(script);
-            resolve(data.ok === true);
+            // data.ok === false with duplicate=true means already submitted
+            resolve(data);
           };
 
           const script = document.createElement("script");
@@ -1170,7 +1179,7 @@
             clearTimeout(timeout);
             delete window[callbackName];
             console.warn("Score submit failed");
-            resolve(false);
+            resolve({ ok: false });
           };
           script.src = url;
           document.head.appendChild(script);
@@ -1221,11 +1230,13 @@
               return;
             }
 
-            // Parse rows: col 0 = name, col 1 = time_seconds, col 2 = completed_at
+            // Parse rows: col 0 = name, col 1 = time_seconds, col 2 = completed_at, col 3 = user_id
+            const myId = getUserId();
             const entries = rows
               .map((row) => ({
                 name: String(row.c[0]?.v ?? "").trim(),
                 secs: Number(row.c[1]?.v ?? Infinity),
+                userId: String(row.c[3]?.v ?? "").trim(),
               }))
               .filter((e) => e.name && isFinite(e.secs))
               .sort((a, b) => a.secs - b.secs)
@@ -1243,9 +1254,7 @@
 
             const rows_html = entries
               .map((e, i) => {
-                const isMe =
-                  _lbHighlightName &&
-                  e.name.toLowerCase() === _lbHighlightName.toLowerCase();
+                const isMe = e.userId === myId;
                 const rank = medals[i] ?? `${i + 1}`;
                 return `<tr class="${isMe ? "lb-me" : ""}">
                 <td>${rank}</td>
@@ -1596,21 +1605,16 @@
             heading.textContent = `Well done, ${existingName}!`;
             message.textContent = "Another puzzle conquered.";
             namePrompt.style.display = "none";
-            if (hasSubmitted()) {
-              // Already submitted this week — don't submit again
-              message.textContent =
-                "You've already submitted a score this week — only your first attempt counts.";
+            lbBtn.disabled = true;
+            lbBtn.textContent = "Submitting…";
+            submitScore(existingName, secs).then((data) => {
               lbBtn.disabled = false;
               lbBtn.textContent = "Leaderboard";
-            } else {
-              lbBtn.disabled = true;
-              lbBtn.textContent = "Submitting…";
-              submitScore(existingName, secs).then(() => {
-                markSubmitted();
-                lbBtn.disabled = false;
-                lbBtn.textContent = "Leaderboard";
-              });
-            }
+              if (data.duplicate) {
+                message.textContent =
+                  "You've already submitted a score this week — only your first attempt counts.";
+              }
+            });
           } else {
             // First-time player — prompt for name
             heading.textContent = "Puzzle Complete!";
@@ -1635,7 +1639,6 @@
             lbBtn.disabled = true;
             lbBtn.textContent = "Submitting…";
             submitScore(val, secs).then(() => {
-              markSubmitted();
               lbBtn.disabled = false;
               lbBtn.textContent = "Leaderboard";
             });
