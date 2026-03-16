@@ -264,6 +264,7 @@
 
       /* ── ERROR ── */
       .error-msg {
+        display: none;
         margin-top: 16px;
         width: 100%;
         max-width: 310px;
@@ -274,13 +275,10 @@
         font-size: 0.95rem;
         color: var(--accent);
         text-align: center;
-        visibility: hidden;
-        opacity: 0;
-        transition: opacity 0.3s;
+        animation: fade-in 0.3s ease;
       }
       .error-msg.show {
-        visibility: visible;
-        opacity: 1;
+        display: block;
       }
 
       /* ── SHAKE ── */
