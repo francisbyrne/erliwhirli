@@ -466,6 +466,152 @@
         background: var(--accent);
       }
 
+      /* ── VICTORY CARD BUTTON ROW ── */
+      .victory-btn-row {
+        margin-top: 24px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .victory-btn-row .dismiss,
+      .victory-btn-row .leaderboard-btn {
+        margin-top: 0;
+      }
+      .victory-card .leaderboard-btn {
+        background: transparent;
+        color: var(--ink);
+        border: 2px solid var(--ink);
+        padding: 10px 20px;
+        font-family: "Source Serif 4", serif;
+        font-size: 0.85rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          color 0.15s;
+      }
+      .victory-card .leaderboard-btn:hover {
+        background: var(--ink);
+        color: var(--paper);
+      }
+
+      /* ── LEADERBOARD OVERLAY ── */
+      .leaderboard-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(26, 16, 8, 0.55);
+        backdrop-filter: blur(3px);
+        z-index: 110;
+        align-items: center;
+        justify-content: center;
+      }
+      .leaderboard-overlay.show {
+        display: flex;
+        animation: fade-in 0.25s ease;
+      }
+      .leaderboard-card {
+        background: var(--paper);
+        border: 3px solid var(--ink);
+        padding: 40px 48px;
+        text-align: center;
+        max-width: 360px;
+        width: calc(100% - 48px);
+        animation: rise 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .leaderboard-card h2 {
+        font-family: "Playfair Display", serif;
+        font-size: 1.4rem;
+        margin-bottom: 6px;
+      }
+      .leaderboard-card .lb-subtitle {
+        font-size: 0.75rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #8a7060;
+        margin-bottom: 24px;
+      }
+      .leaderboard-card .lb-loading {
+        font-size: 0.85rem;
+        color: #8a7060;
+        padding: 20px 0;
+        letter-spacing: 0.1em;
+      }
+      .leaderboard-card .lb-error {
+        font-size: 0.82rem;
+        color: var(--accent);
+        padding: 16px 0;
+        line-height: 1.5;
+      }
+      .lb-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 4px;
+      }
+      .lb-table th {
+        font-family: "Playfair Display", serif;
+        font-size: 0.72rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--accent);
+        border-bottom: 1.5px solid var(--ink);
+        padding: 0 6px 8px;
+      }
+      .lb-table th:first-child {
+        text-align: left;
+        width: 2em;
+      }
+      .lb-table th:nth-child(2) {
+        text-align: left;
+      }
+      .lb-table th:last-child {
+        text-align: right;
+      }
+      .lb-table td {
+        font-size: 0.88rem;
+        padding: 7px 6px;
+        border-bottom: 1px solid #d4c9b0;
+      }
+      .lb-table td:first-child {
+        font-family: "Playfair Display", serif;
+        font-size: 0.78rem;
+        color: #8a7060;
+        text-align: left;
+      }
+      .lb-table td:nth-child(2) {
+        text-align: left;
+      }
+      .lb-table td:last-child {
+        font-family: "Playfair Display", serif;
+        text-align: right;
+        color: var(--accent);
+      }
+      .lb-table tr.lb-me td {
+        font-weight: 600;
+        background: #f0eadc;
+      }
+      .lb-table tr:last-child td {
+        border-bottom: none;
+      }
+      .leaderboard-card .lb-close {
+        margin-top: 24px;
+        background: var(--ink);
+        color: var(--paper);
+        border: none;
+        padding: 10px 28px;
+        font-family: "Source Serif 4", serif;
+        font-size: 0.85rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .leaderboard-card .lb-close:hover {
+        background: var(--accent);
+      }
+
       /* ── NAME EDIT MODAL ── */
       .name-modal-overlay {
         display: none;
@@ -647,7 +793,21 @@
           <div class="name-error" id="victory-name-error"></div>
         </div>
 
-        <button class="dismiss" id="victory-dismiss">Close</button>
+        <div class="victory-btn-row">
+          <button class="leaderboard-btn" id="victory-leaderboard-btn">
+            Leaderboard
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leaderboard overlay -->
+    <div class="leaderboard-overlay" id="leaderboard-overlay">
+      <div class="leaderboard-card">
+        <h2>Leaderboard</h2>
+        <div class="lb-subtitle">Top 10 fastest times</div>
+        <div id="lb-body"><div class="lb-loading">Loading…</div></div>
+        <button class="lb-close" id="lb-close">Close</button>
       </div>
     </div>
 
@@ -916,6 +1076,149 @@
       // ─── INIT ─────────────────────────────────────────────────────────────────────
       // Pull the environment variables in from a settings file
       const { sheetId, sheetGid } = window.CROSSWORD_SETTINGS;
+      const LEADERBOARD_POST_URL =
+        "https://script.google.com/macros/s/AKfycbzwkKqwefqy_Q2YIszlqPRLK2nLDKucWwk6pyKv1W_lEWDPLCF_rz8vceFEOYydSdFKTg/exec";
+      const LEADERBOARD_GID = "1934708003";
+
+      // ─── LEADERBOARD ──────────────────────────────────────────────────────────────
+
+      // Submit a score to the Apps Script web app (fire-and-forget).
+      function submitScore(name, timeSeconds) {
+        return new Promise((resolve) => {
+          const callbackName = "_submitCallback_" + Date.now();
+          const url =
+            `${LEADERBOARD_POST_URL}?callback=${callbackName}` +
+            `&name=${encodeURIComponent(name)}` +
+            `&time_seconds=${encodeURIComponent(timeSeconds)}`;
+
+          const timeout = setTimeout(() => {
+            delete window[callbackName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+            console.warn("Score submit timed out");
+            resolve(false);
+          }, 10000);
+
+          window[callbackName] = function (data) {
+            clearTimeout(timeout);
+            delete window[callbackName];
+            if (script.parentNode) script.parentNode.removeChild(script);
+            resolve(data.ok === true);
+          };
+
+          const script = document.createElement("script");
+          script.onerror = () => {
+            clearTimeout(timeout);
+            delete window[callbackName];
+            console.warn("Score submit failed");
+            resolve(false);
+          };
+          script.src = url;
+          document.head.appendChild(script);
+        });
+      }
+
+      // Fetch and display the top-10 leaderboard using the same JSONP trick.
+      function showLeaderboard(highlightName) {
+        const overlay = document.getElementById("leaderboard-overlay");
+        const body = document.getElementById("lb-body");
+        body.innerHTML = '<div class="lb-loading">Loading…</div>';
+        overlay.classList.add("show");
+
+        const callbackName = "_lbCallback_" + Date.now();
+        const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json;responseHandler:${callbackName}&gid=${LEADERBOARD_GID}`;
+
+        const timeout = setTimeout(() => {
+          cleanup();
+          body.innerHTML =
+            '<div class="lb-error">Couldn\'t load the leaderboard — timed out.</div>';
+        }, 10000);
+
+        function cleanup() {
+          clearTimeout(timeout);
+          delete window[callbackName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+        }
+
+        window[callbackName] = function (json) {
+          cleanup();
+          try {
+            const rows = json.table.rows;
+            if (!rows || rows.length === 0) {
+              body.innerHTML =
+                '<div class="lb-loading">No scores yet — be the first!</div>';
+              return;
+            }
+
+            // Parse rows: col 0 = name, col 1 = time_seconds, col 2 = completed_at
+            const entries = rows
+              .map((row) => ({
+                name: String(row.c[0]?.v ?? "").trim(),
+                secs: Number(row.c[1]?.v ?? Infinity),
+              }))
+              .filter((e) => e.name && isFinite(e.secs))
+              .sort((a, b) => a.secs - b.secs)
+              .slice(0, 10);
+
+            if (entries.length === 0) {
+              body.innerHTML =
+                '<div class="lb-loading">No scores yet — be the first!</div>';
+              return;
+            }
+
+            const medals = ["🥇", "🥈", "🥉"];
+            const fmtTime = (s) =>
+              s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
+
+            const rows_html = entries
+              .map((e, i) => {
+                const isMe =
+                  highlightName &&
+                  e.name.toLowerCase() === highlightName.toLowerCase();
+                const rank = medals[i] ?? `${i + 1}`;
+                return `<tr class="${isMe ? "lb-me" : ""}">
+                <td>${rank}</td>
+                <td>${e.name}</td>
+                <td>${fmtTime(e.secs)}</td>
+              </tr>`;
+              })
+              .join("");
+
+            body.innerHTML = `
+              <table class="lb-table">
+                <thead><tr>
+                  <th>#</th><th>Name</th><th>Time</th>
+                </tr></thead>
+                <tbody>${rows_html}</tbody>
+              </table>`;
+          } catch (err) {
+            body.innerHTML =
+              '<div class="lb-error">Couldn\'t parse the leaderboard data.</div>';
+            console.error("Leaderboard parse error:", err);
+          }
+        };
+
+        const script = document.createElement("script");
+        script.onerror = () => {
+          cleanup();
+          body.innerHTML =
+            '<div class="lb-error">Couldn\'t load the leaderboard.</div>';
+        };
+        script.src = url;
+        document.head.appendChild(script);
+      }
+
+      document.getElementById("lb-close").addEventListener("click", () => {
+        document.getElementById("leaderboard-overlay").classList.remove("show");
+      });
+      document
+        .getElementById("leaderboard-overlay")
+        .addEventListener("click", (e) => {
+          if (e.target === document.getElementById("leaderboard-overlay"))
+            document
+              .getElementById("leaderboard-overlay")
+              .classList.remove("show");
+        });
+
       loadPuzzle(sheetId, sheetGid).then((data) => {
         if (!data) return;
         document.getElementById("loading-state").style.display = "none";
@@ -1169,7 +1472,7 @@
                 ? `in ${secs} second${secs === 1 ? "" : "s"}`
                 : `in ${Math.floor(secs / 60)}m ${secs % 60}s`;
 
-            showVictory(timeStr);
+            showVictory(timeStr, secs);
           } else {
             errorEl.classList.add("show");
             if (!hasShaken) {
@@ -1186,7 +1489,7 @@
         }
 
         // ── VICTORY DIALOG ──
-        function showVictory(timeStr) {
+        function showVictory(timeStr, secs) {
           const existingName = getPlayerName();
           const heading = document.getElementById("victory-heading");
           const message = document.getElementById("victory-message");
@@ -1194,14 +1497,16 @@
           const nameInput = document.getElementById("victory-name-input");
           const nameError = document.getElementById("victory-name-error");
           const dismissBtn = document.getElementById("victory-dismiss");
+          const lbBtn = document.getElementById("victory-leaderboard-btn");
 
           document.getElementById("victory-time").textContent = timeStr;
 
           if (existingName) {
-            // Returning player — greet by name
+            // Returning player — greet by name, submit score immediately
             heading.textContent = `Well done, ${existingName}!`;
             message.textContent = "Another puzzle conquered.";
             namePrompt.style.display = "none";
+            submitScore(existingName, secs);
           } else {
             // First-time player — prompt for name
             heading.textContent = "Puzzle Complete!";
@@ -1209,9 +1514,8 @@
             namePrompt.style.display = "block";
             nameInput.value = "";
             nameError.textContent = "";
-            // Pause capture auto-refocus so typing goes into name field
             capturePaused = true;
-            setTimeout(() => nameInput.focus(), 350); // wait for card animation
+            setTimeout(() => nameInput.focus(), 350);
           }
 
           document.getElementById("victory-overlay").classList.add("show");
@@ -1224,10 +1528,10 @@
               return;
             }
             savePlayerName(val);
-            // Update dialog to congratulate by name
+            submitScore(val, secs);
             heading.textContent = `Welcome, ${val}!`;
             message.textContent =
-              "Your name has been saved for the leaderboard.";
+              "Your score has been submitted to the leaderboard.";
             namePrompt.style.display = "none";
             capturePaused = false;
           };
@@ -1235,6 +1539,10 @@
           nameInput.onkeydown = (e) => {
             if (e.key === "Enter")
               document.getElementById("victory-name-save").click();
+          };
+
+          lbBtn.onclick = () => {
+            showLeaderboard(getPlayerName());
           };
 
           dismissBtn.onclick = () => {
