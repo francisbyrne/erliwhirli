@@ -828,7 +828,7 @@
             <ul id="clues-across"></ul>
           </div>
           <div class="clue-group">
-            <h2 id="debug-down-heading" style="cursor: pointer">Down</h2>
+            <h2 id="debug-down-heading">Down</h2>
             <ul id="clues-down"></ul>
           </div>
         </div>
@@ -1761,11 +1761,11 @@
     </script>
     <script>
       // ── DEBUG: tap "Down" heading to show victory dialog ──
-      document
-        .getElementById("debug-down-heading")
-        .addEventListener("click", () => {
-          showVictory("in 42 seconds", 42);
-        });
+      // document
+      //   .getElementById("debug-down-heading")
+      //   .addEventListener("click", () => {
+      //     showVictory("in 42 seconds", 42);
+      //   });
     </script>
     <div class="version-tag">v1.3.10</div>
   </body>
