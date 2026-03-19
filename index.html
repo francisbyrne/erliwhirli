@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Cache-Control"
+      content="no-cache, no-store, must-revalidate"
+    />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>Erly Whirly Thirsdly Mini</title>
     <link rel="icon" href="favicon.ico" />
     <link
@@ -736,6 +742,17 @@
         margin-top: 6px;
         min-height: 1em;
       }
+      .version-tag {
+        position: fixed;
+        bottom: 10px;
+        right: 14px;
+        font-family: "Source Serif 4", serif;
+        font-size: 0.65rem;
+        color: #c9b99a;
+        letter-spacing: 0.08em;
+        pointer-events: none;
+        z-index: 10;
+      }
     </style>
 
     <script src="settings.js"></script>
@@ -884,7 +901,7 @@
 
     <script>
       // ─── SHARED STATE ─────────────────────────────────────────────────────────────
-      // Controls whether the hidden capture input auto-refocuses on blur.
+      // Controls whether per-cell inputs should refocus when activated.
       // Set to true whenever a name text field should hold focus.
       let capturePaused = false;
 
@@ -938,7 +955,7 @@
         input.value = getPlayerName() || "";
         document.getElementById("modal-name-error").textContent = "";
         document.getElementById("name-modal-overlay").classList.add("show");
-        // Pause capture auto-refocus so typing goes into the text field
+        // Pause cell refocus so typing goes into the text field
         capturePaused = true;
         setTimeout(() => input.focus(), 50);
       }
@@ -946,7 +963,7 @@
       function closeNameModal() {
         document.getElementById("name-modal-overlay").classList.remove("show");
         capturePaused = false;
-        document.getElementById("capture").focus();
+        refocusActiveCell();
       }
 
       document
@@ -1314,7 +1331,7 @@
           if (e.target === document.getElementById("victory-overlay")) {
             document.getElementById("victory-overlay").classList.remove("show");
             capturePaused = false;
-            document.getElementById("capture").focus();
+            refocusActiveCell();
           }
         });
 
@@ -1325,6 +1342,10 @@
         container.style.display = "flex";
         initPuzzle(data.WORDS, data.SOLUTION, data.OPEN);
       });
+
+      // Global hook so outside-of-initPuzzle handlers can refocus the active cell.
+      // Replaced with a real implementation once initPuzzle runs.
+      let refocusActiveCell = () => {};
 
       // ─── PUZZLE ENGINE ────────────────────────────────────────────────────────────
       function initPuzzle(WORDS, SOLUTION, OPEN) {
@@ -1353,9 +1374,8 @@
         const gridEl = document.getElementById("grid");
         const cellEl = {};
         const cellLabel = {};
+        const capture = document.getElementById("capture");
 
-        // For each cell, prefer the across label; only use down if no across starts here.
-        // This matches standard crossword convention where shared cells take the across number.
         WORDS.forEach((w) => {
           const { r, c } = w.cells[0];
           const key = `${r},${c}`;
@@ -1386,14 +1406,26 @@
               letter.classList.add("letter");
               cell.appendChild(letter);
 
+              // touchstart: call capture.focus() synchronously — this is the
+              // one moment WebView will honour a programmatic focus because it
+              // is inside a touch handler. Also update game state.
+              cell.addEventListener(
+                "touchstart",
+                (e) => {
+                  e.preventDefault();
+                  capture.focus(); // ← must be synchronous and first
+                  onCellClick(r, c);
+                },
+                { passive: false },
+              );
+
+              // mousedown for desktop/Chrome
               cell.addEventListener("mousedown", (e) => {
                 e.preventDefault();
+                capture.focus();
                 onCellClick(r, c);
               });
-              cell.addEventListener("touchend", (e) => {
-                e.preventDefault();
-                onCellClick(r, c);
-              });
+
               cellEl[`${r},${c}`] = cell;
             }
 
@@ -1406,20 +1438,17 @@
         WORDS.forEach((w) => {
           const li = document.createElement("li");
           li.innerHTML = `<span class="cn">${w.label}.</span>${w.clue}`;
-          li.addEventListener("click", () => activateWord(w, 0));
+          li.addEventListener("click", () => {
+            activateWord(w, 0);
+            capture.focus();
+          });
           document
             .getElementById(w.dir === "across" ? "clues-across" : "clues-down")
             .appendChild(li);
           clueEls[w.id] = li;
         });
 
-        // ── CAPTURE INPUT ──
-        const capture = document.getElementById("capture");
-
-        // When a name input is open we want focus to stay there, not snap back
-        // to the hidden capture field. Set this flag to true to pause the
-        // auto-refocus behaviour.
-
+        // ── CAPTURE INPUT — single input handles all typing ──
         capture.addEventListener("blur", () => {
           if (!capturePaused) setTimeout(() => capture.focus(), 50);
         });
@@ -1470,10 +1499,12 @@
           checkComplete();
         });
 
-        document
-          .getElementById("grid-wrapper")
-          .addEventListener("mousedown", () => capture.focus());
-        capture.focus();
+        function focusActiveCell() {
+          if (!capturePaused) capture.focus();
+        }
+
+        // Wire up the global hook so handlers outside initPuzzle can call it
+        refocusActiveCell = focusActiveCell;
 
         // ── ACTIVATE WORD ──
         function activateWord(word, letterIdx) {
@@ -1499,7 +1530,6 @@
 
           Object.values(clueEls).forEach((li) => li.classList.remove("active"));
           clueEls[word.id].classList.add("active");
-          capture.focus();
         }
 
         function advanceInWord() {
@@ -1677,13 +1707,15 @@
           dismissBtn.onclick = () => {
             document.getElementById("victory-overlay").classList.remove("show");
             capturePaused = false;
-            document.getElementById("capture").focus();
+            refocusActiveCell();
           };
         }
 
         // ── START ──
         activateWord(WORDS[0], 0);
+        focusActiveCell();
       }
     </script>
+    <div class="version-tag">v1.2.9</div>
   </body>
 </html>
