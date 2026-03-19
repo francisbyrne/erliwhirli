@@ -258,14 +258,23 @@
       }
 
       #capture {
-        position: fixed;
+        /* Covers the entire grid so the user's finger always lands on it.
+           WebView then treats every focus() call as a genuine touch gesture
+           and shows the keyboard. Visually invisible but pointer-events on. */
+        position: absolute;
         opacity: 0;
-        width: 1px;
-        height: 1px;
         top: 0;
         left: 0;
-        pointer-events: none;
+        width: 100%;
+        height: 100%;
         font-size: 16px;
+        cursor: text;
+        z-index: 3;
+        background: transparent;
+        border: none;
+        outline: none;
+        caret-color: transparent;
+        color: transparent;
       }
 
       /* ── ERROR ── */
@@ -787,20 +796,20 @@
       <code id="fetch-error-url"></code>
     </div>
 
-    <!-- Single hidden input — permanently focused, captures all typing -->
-    <input
-      id="capture"
-      type="text"
-      autocomplete="off"
-      autocorrect="off"
-      autocapitalize="characters"
-      spellcheck="false"
-      inputmode="text"
-    />
-
     <!-- Puzzle (shown after load) -->
     <div id="puzzle-container">
       <div class="grid-wrapper" id="grid-wrapper">
+        <!-- Capture input covers the grid — user's finger always touches it,
+             so WebView shows the keyboard on focus() calls -->
+        <input
+          id="capture"
+          type="text"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          inputmode="text"
+        />
         <div class="grid" id="grid"></div>
       </div>
 
@@ -1406,26 +1415,6 @@
               letter.classList.add("letter");
               cell.appendChild(letter);
 
-              // touchstart: call capture.focus() synchronously — this is the
-              // one moment WebView will honour a programmatic focus because it
-              // is inside a touch handler. Also update game state.
-              cell.addEventListener(
-                "touchstart",
-                (e) => {
-                  e.preventDefault();
-                  capture.focus(); // ← must be synchronous and first
-                  onCellClick(r, c);
-                },
-                { passive: false },
-              );
-
-              // mousedown for desktop/Chrome
-              cell.addEventListener("mousedown", (e) => {
-                e.preventDefault();
-                capture.focus();
-                onCellClick(r, c);
-              });
-
               cellEl[`${r},${c}`] = cell;
             }
 
@@ -1449,6 +1438,35 @@
         });
 
         // ── CAPTURE INPUT — single input handles all typing ──
+        // It overlays the entire grid, so the user's finger always lands on it.
+        // We use the touch/mouse coordinates to figure out which cell was tapped.
+
+        function cellFromPoint(x, y) {
+          // Temporarily hide capture so elementFromPoint can see the cell beneath
+          capture.style.display = "none";
+          const el = document.elementFromPoint(x, y);
+          capture.style.display = "";
+          if (!el) return null;
+          const cell = el.closest(".cell");
+          if (!cell || cell.classList.contains("blocked")) return null;
+          return { r: parseInt(cell.dataset.r), c: parseInt(cell.dataset.c) };
+        }
+
+        capture.addEventListener(
+          "touchstart",
+          (e) => {
+            const t = e.changedTouches[0];
+            const cell = cellFromPoint(t.clientX, t.clientY);
+            if (cell) onCellClick(cell.r, cell.c);
+          },
+          { passive: true },
+        );
+
+        capture.addEventListener("mousedown", (e) => {
+          const cell = cellFromPoint(e.clientX, e.clientY);
+          if (cell) onCellClick(cell.r, cell.c);
+        });
+
         capture.addEventListener("blur", () => {
           if (!capturePaused) setTimeout(() => capture.focus(), 50);
         });
@@ -1716,6 +1734,6 @@
         focusActiveCell();
       }
     </script>
-    <div class="version-tag">v1.2.9</div>
+    <div class="version-tag">v1.3.0</div>
   </body>
 </html>
