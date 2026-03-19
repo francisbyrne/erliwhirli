@@ -1442,14 +1442,18 @@
         // We use the touch/mouse coordinates to figure out which cell was tapped.
 
         function cellFromPoint(x, y) {
-          // Temporarily hide capture so elementFromPoint can see the cell beneath
-          capture.style.display = "none";
-          const el = document.elementFromPoint(x, y);
-          capture.style.display = "";
-          if (!el) return null;
-          const cell = el.closest(".cell");
-          if (!cell || cell.classList.contains("blocked")) return null;
-          return { r: parseInt(cell.dataset.r), c: parseInt(cell.dataset.c) };
+          for (const [key, el] of Object.entries(cellEl)) {
+            const rect = el.getBoundingClientRect();
+            if (
+              x >= rect.left &&
+              x <= rect.right &&
+              y >= rect.top &&
+              y <= rect.bottom
+            ) {
+              return { r: parseInt(el.dataset.r), c: parseInt(el.dataset.c) };
+            }
+          }
+          return null;
         }
 
         capture.addEventListener(
@@ -1734,6 +1738,6 @@
         focusActiveCell();
       }
     </script>
-    <div class="version-tag">v1.3.0</div>
+    <div class="version-tag">v1.3.1</div>
   </body>
 </html>
