@@ -1599,8 +1599,27 @@
             }
           }
 
-          // No active word yet, or tapped cell is outside the active word — prefer across.
-          if (acrossWord) {
+          // No active word yet, or tapped cell is outside the active word.
+          // Prefer down when a down word starts on this cell and the visible
+          // corner number belongs to that down clue — i.e. no across word
+          // starts here with the same or lower number (which would "own" the corner).
+          const downStartsHere =
+            downWord && downWord.cells[0].r === r && downWord.cells[0].c === c;
+          const acrossStartsHere =
+            acrossWord &&
+            acrossWord.cells[0].r === r &&
+            acrossWord.cells[0].c === c;
+          const acrossOwnsCorner =
+            acrossStartsHere &&
+            parseInt(acrossWord.label) <= parseInt(downWord?.label ?? "999");
+          const isDownOnlyStart = downStartsHere && !acrossOwnsCorner;
+
+          if (isDownOnlyStart) {
+            const idx = downWord.cells.findIndex(
+              (cell) => cell.r === r && cell.c === c,
+            );
+            activateWord(downWord, idx);
+          } else if (acrossWord) {
             const idx = acrossWord.cells.findIndex(
               (cell) => cell.r === r && cell.c === c,
             );
@@ -1748,6 +1767,6 @@
           showVictory("in 42 seconds", 42);
         });
     </script>
-    <div class="version-tag">v1.3.7</div>
+    <div class="version-tag">v1.3.10</div>
   </body>
 </html>
