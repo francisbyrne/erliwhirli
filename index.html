@@ -1467,6 +1467,9 @@
         );
 
         capture.addEventListener("mousedown", (e) => {
+          // Only handle mouse events that aren't preceded by touch
+          if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents)
+            return;
           const cell = cellFromPoint(e.clientX, e.clientY);
           if (cell) onCellClick(cell.r, cell.c);
         });
@@ -1738,6 +1741,6 @@
         focusActiveCell();
       }
     </script>
-    <div class="version-tag">v1.3.1</div>
+    <div class="version-tag">v1.3.2</div>
   </body>
 </html>
