@@ -1558,61 +1558,52 @@
         }
 
         function advanceInWord() {
-          if (activeCellIdx < activeWord.cells.length - 1)
+          if (activeWord && activeCellIdx < activeWord.cells.length - 1)
             activateWord(activeWord, activeCellIdx + 1);
         }
         function retreatInWord() {
-          if (activeCellIdx > 0) activateWord(activeWord, activeCellIdx - 1);
+          if (activeWord && activeCellIdx > 0)
+            activateWord(activeWord, activeCellIdx - 1);
         }
 
         // ── CLICK HANDLER ──
         function onCellClick(r, c) {
-          // Find all words that pass through this cell
           const wordsHere = WORDS.filter((w) =>
             w.cells.some((cell) => cell.r === r && cell.c === c),
           );
           const acrossWord = wordsHere.find((w) => w.dir === "across");
           const downWord = wordsHere.find((w) => w.dir === "down");
 
-          // If the clicked cell is already part of the active word,
-          // toggle to the other direction (if one exists at this cell).
-          const idxInCurrent = activeWord.cells.findIndex(
-            (cell) => cell.r === r && cell.c === c,
-          );
-          if (idxInCurrent !== -1) {
-            const other = activeWord.dir === "across" ? downWord : acrossWord;
-            if (other) {
-              const idxInOther = other.cells.findIndex(
-                (cell) => cell.r === r && cell.c === c,
-              );
-              activateWord(other, idxInOther);
-            } else {
-              // No crossing word — just move cursor to this cell
-              activateWord(activeWord, idxInCurrent);
-            }
-            return;
-          }
-
-          // Cell is not in the active word — pick the best word to activate.
-          if (acrossWord && downWord) {
-            // Prefer across unless it's already filled and down isn't
-            if (isWordFilled(acrossWord) && !isWordFilled(downWord)) {
-              const idx = downWord.cells.findIndex(
-                (cell) => cell.r === r && cell.c === c,
-              );
-              activateWord(downWord, idx);
-            } else {
-              const idx = acrossWord.cells.findIndex(
-                (cell) => cell.r === r && cell.c === c,
-              );
-              activateWord(acrossWord, idx);
-            }
-          } else if (acrossWord || downWord) {
-            const w = acrossWord || downWord;
-            const idx = w.cells.findIndex(
+          // If there's an active word and the tapped cell is already in it, toggle direction.
+          if (activeWord) {
+            const idxInCurrent = activeWord.cells.findIndex(
               (cell) => cell.r === r && cell.c === c,
             );
-            activateWord(w, idx);
+            if (idxInCurrent !== -1) {
+              const other = activeWord.dir === "across" ? downWord : acrossWord;
+              if (other) {
+                const idxInOther = other.cells.findIndex(
+                  (cell) => cell.r === r && cell.c === c,
+                );
+                activateWord(other, idxInOther);
+              } else {
+                activateWord(activeWord, idxInCurrent);
+              }
+              return;
+            }
+          }
+
+          // No active word yet, or tapped cell is outside the active word — prefer across.
+          if (acrossWord) {
+            const idx = acrossWord.cells.findIndex(
+              (cell) => cell.r === r && cell.c === c,
+            );
+            activateWord(acrossWord, idx);
+          } else if (downWord) {
+            const idx = downWord.cells.findIndex(
+              (cell) => cell.r === r && cell.c === c,
+            );
+            activateWord(downWord, idx);
           }
         }
 
@@ -1737,10 +1728,11 @@
         }
 
         // ── START ──
-        activateWord(WORDS[0], 0);
-        focusActiveCell();
+        // Start with nothing active — first tap picks across naturally.
+        activeWord = null;
+        activeCellIdx = 0;
       }
     </script>
-    <div class="version-tag">v1.3.2</div>
+    <div class="version-tag">v1.3.4</div>
   </body>
 </html>
