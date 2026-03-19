@@ -374,8 +374,10 @@
         background: rgba(26, 16, 8, 0.55);
         backdrop-filter: blur(3px);
         z-index: 100;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
+        overflow-y: auto;
+        padding: 24px 24px env(safe-area-inset-bottom, 24px);
       }
       .victory-overlay.show {
         display: flex;
@@ -398,6 +400,7 @@
         width: calc(100% - 48px);
         animation: rise 0.4s cubic-bezier(0.22, 1, 0.36, 1);
         position: relative;
+        margin: auto 0;
       }
       @keyframes rise {
         from {
@@ -1685,7 +1688,10 @@
             nameInput.value = "";
             nameError.textContent = "";
             capturePaused = true;
-            setTimeout(() => nameInput.focus(), 350);
+            setTimeout(() => {
+              nameInput.focus();
+              nameInput.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 350);
           }
 
           document.getElementById("victory-overlay").classList.add("show");
@@ -1733,6 +1739,6 @@
         activeCellIdx = 0;
       }
     </script>
-    <div class="version-tag">v1.3.4</div>
+    <div class="version-tag">v1.3.5</div>
   </body>
 </html>
