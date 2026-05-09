@@ -1485,7 +1485,11 @@
       document
         .getElementById("share-instagram")
         .addEventListener("click", () => {
-          document.getElementById("share-camera-input").click();
+          const camInput = document.getElementById("share-camera-input");
+          // Reinforce front-camera hint at click time — some browsers re-read
+          // the attribute only when the input is triggered, not at parse time.
+          camInput.setAttribute("capture", "user");
+          camInput.click();
         });
 
       // Step 2: user picks/takes a photo → read it, draw onto canvas, share
@@ -1502,7 +1506,7 @@
           const img = new Image();
           const objectUrl = URL.createObjectURL(file);
           img.onload = () => {
-            // Draw photo onto a 9:16 canvas (Instagram Stories ratio)
+            // Draw photo onto a 9:16 canvas (Instagram Stories ratio) then share via Web Share API
             const W = 1080,
               H = 1920;
             const canvas = document.createElement("canvas");
@@ -1551,7 +1555,9 @@
 
             URL.revokeObjectURL(objectUrl);
 
-            // Convert canvas to blob and share via instagram-stories://share
+            // Convert canvas to blob then share via the native Web Share API.
+            // IMPORTANT: pass `files` only — mixing in title/text causes browsers
+            // to silently drop the file and share text instead.
             canvas.toBlob(
               (blob) => {
                 if (!blob) {
@@ -1559,23 +1565,34 @@
                   return;
                 }
 
-                // Use Web Share API if available (shares the image natively)
                 const imageFile = new File([blob], "score.jpg", {
                   type: "image/jpeg",
                 });
+
                 if (
                   navigator.canShare &&
                   navigator.canShare({ files: [imageFile] })
                 ) {
+                  // Native share sheet — user picks Instagram (or any other app)
                   navigator
-                    .share({
-                      files: [imageFile],
-                      title: buildShareText(),
-                    })
+                    .share({ files: [imageFile] })
                     .then(() => resetShareBtn(btn))
-                    .catch(() => instagramDeepLink(blob, btn));
+                    .catch((err) => {
+                      // AbortError = user cancelled; anything else is a real failure
+                      resetShareBtn(btn);
+                    });
                 } else {
-                  instagramDeepLink(blob, btn);
+                  // Web Share API not available — prompt user to save and share manually
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "my-crossword-score.jpg";
+                  a.click();
+                  setTimeout(() => URL.revokeObjectURL(url), 5000);
+                  resetShareBtn(btn);
+                  alert(
+                    "Image saved! Open Instagram and share it to your Story.",
+                  );
                 }
               },
               "image/jpeg",
@@ -1591,22 +1608,6 @@
           // Reset input so same photo can be retaken
           e.target.value = "";
         });
-
-      function instagramDeepLink(blob, btn) {
-        // Read blob as base64 data URL, then fire instagram-stories://share
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = reader.result;
-          // instagram-stories://share?backgroundImage=<encoded>
-          const encoded = encodeURIComponent(dataUrl);
-          window.location.href = `instagram-stories://share?backgroundImage=${encoded}`;
-          // Fallback: if scheme doesn't fire within 1.5s, open instagram.com
-          setTimeout(() => {
-            resetShareBtn(btn);
-          }, 1500);
-        };
-        reader.readAsDataURL(blob);
-      }
 
       function resetShareBtn(btn) {
         btn.disabled = false;
@@ -2097,6 +2098,6 @@
       <span class="tm-label">Time</span>
       <span class="tm-value" id="timer-display">0:00</span>
     </div>
-    <div class="version-tag">v1.3.16</div>
+    <div class="version-tag">v1.3.18</div>
   </body>
 </html>
