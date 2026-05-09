@@ -425,12 +425,14 @@
         z-index: 90;
         background: var(--paper);
         border-top: 2px solid var(--ink);
-        padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+        padding: 10px 16px;
         flex-direction: row;
         align-items: center;
         gap: 10px;
         min-height: 48px;
         box-shadow: 0 -2px 12px rgba(26, 16, 8, 0.08);
+        /* bottom is overridden by JS via the Visual Viewport API
+           so the bar always sits just above the on-screen keyboard */
       }
       #active-clue-bar.visible {
         display: flex;
@@ -2026,7 +2028,7 @@
           if (bar) {
             document.getElementById("acb-num").textContent = word.label + ".";
             document.getElementById("acb-dir").textContent =
-              word.direction === "across" ? "→ Across" : "↓ Down";
+              word.dir === "across" ? "→ Across" : "↓ Down";
             document.getElementById("acb-text").textContent = word.clue;
             bar.classList.add("visible");
           }
@@ -2233,6 +2235,25 @@
         activeWord = null;
         activeCellIdx = 0;
       }
+
+      // ── CLUE BAR: track visual viewport so bar stays above keyboard ──
+      function updateClueBarPosition() {
+        const bar = document.getElementById("active-clue-bar");
+        if (!bar) return;
+        if (window.visualViewport) {
+          // Visual Viewport API: gives us the actual visible rect
+          const vv = window.visualViewport;
+          // Distance from bottom of visual viewport to bottom of layout viewport
+          const offsetFromBottom =
+            window.innerHeight - (vv.offsetTop + vv.height);
+          bar.style.bottom = Math.max(0, offsetFromBottom) + "px";
+        }
+      }
+
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", updateClueBarPosition);
+        window.visualViewport.addEventListener("scroll", updateClueBarPosition);
+      }
     </script>
     <!-- Active clue bar — visible when keyboard is open on mobile -->
     <div id="active-clue-bar">
@@ -2247,6 +2268,6 @@
       <span class="tm-value" id="timer-display">0:00</span>
     </div>
 
-    <div class="version-tag">v1.3.24</div>
+    <div class="version-tag">v1.3.26</div>
   </body>
 </html>
