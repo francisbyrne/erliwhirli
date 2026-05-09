@@ -728,6 +728,70 @@
       }
 
       /* ── SHARE ROW ── */
+      /* ── CAMERA VIEWFINDER MODAL ── */
+      .camera-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: #000;
+        z-index: 400;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      .camera-overlay.show {
+        display: flex;
+      }
+      .camera-viewfinder {
+        width: 100%;
+        max-width: 480px;
+        aspect-ratio: 3/4;
+        object-fit: cover;
+        background: #111;
+        display: block;
+      }
+      .camera-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 32px;
+        padding: 28px 0 20px;
+        width: 100%;
+        max-width: 480px;
+      }
+      .camera-shutter {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        border: 4px solid #fff;
+        background: #fff;
+        cursor: pointer;
+        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.3);
+        transition: transform 0.1s;
+        flex-shrink: 0;
+      }
+      .camera-shutter:active {
+        transform: scale(0.92);
+      }
+      .camera-cancel-btn {
+        font-family: "Source Serif 4", serif;
+        font-size: 0.85rem;
+        letter-spacing: 0.08em;
+        color: #c9b99a;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 8px 16px;
+      }
+      .camera-hint {
+        font-family: "Source Serif 4", serif;
+        font-size: 0.75rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.5);
+        padding-bottom: 8px;
+      }
+
       /* ── SHARE PREVIEW MODAL ── */
       .share-preview-overlay {
         display: none;
@@ -1085,14 +1149,28 @@
             </svg>
             Share to Instagram Story
           </button>
-          <!-- Hidden file input that triggers the front camera -->
-          <input
-            type="file"
-            id="share-camera-input"
-            accept="image/*"
-            capture="user"
-          />
         </div>
+      </div>
+    </div>
+
+    <!-- Camera viewfinder modal -->
+    <div class="camera-overlay" id="camera-overlay">
+      <div class="camera-hint">Smile! ✦</div>
+      <video
+        class="camera-viewfinder"
+        id="camera-viewfinder"
+        autoplay
+        playsinline
+        muted
+      ></video>
+      <canvas id="camera-canvas" style="display: none"></canvas>
+      <div class="camera-controls">
+        <button class="camera-cancel-btn" id="camera-cancel">Cancel</button>
+        <button
+          class="camera-shutter"
+          id="camera-shutter"
+          aria-label="Take photo"
+        ></button>
       </div>
     </div>
 
@@ -1602,100 +1680,133 @@
       // the user's tap on "Share" is the fresh gesture we need.
 
       let _sharePendingFile = null;
+      let _cameraStream = null;
 
       function openShareCamera() {
-        const camInput = document.getElementById("share-camera-input");
-        camInput.setAttribute("capture", "user"); // front/selfie camera
-        camInput.click();
+        const overlay = document.getElementById("camera-overlay");
+        const video = document.getElementById("camera-viewfinder");
+
+        navigator.mediaDevices
+          .getUserMedia({
+            video: { facingMode: "user" }, // front/selfie camera
+            audio: false,
+          })
+          .then((stream) => {
+            _cameraStream = stream;
+            video.srcObject = stream;
+            overlay.classList.add("show");
+          })
+          .catch((err) => {
+            alert("Could not access camera: " + err.message);
+          });
+      }
+
+      function stopCamera() {
+        if (_cameraStream) {
+          _cameraStream.getTracks().forEach((t) => t.stop());
+          _cameraStream = null;
+        }
+        const video = document.getElementById("camera-viewfinder");
+        video.srcObject = null;
+        document.getElementById("camera-overlay").classList.remove("show");
       }
 
       document
         .getElementById("share-instagram")
         .addEventListener("click", openShareCamera);
-
-      // Photo confirmed → build canvas → show preview (don't share yet)
       document
-        .getElementById("share-camera-input")
-        .addEventListener("change", (e) => {
-          const file = e.target.files && e.target.files[0];
-          if (!file) return;
-          e.target.value = "";
+        .getElementById("camera-cancel")
+        .addEventListener("click", stopCamera);
 
+      document
+        .getElementById("camera-shutter")
+        .addEventListener("click", () => {
+          const video = document.getElementById("camera-viewfinder");
+          // Snapshot from the live video stream
+          const snap = document.getElementById("camera-canvas");
+          snap.width = video.videoWidth;
+          snap.height = video.videoHeight;
+          snap.getContext("2d").drawImage(video, 0, 0);
+          stopCamera();
+
+          // Feed snapshot into the score-card composer
           const img = new Image();
-          const objectUrl = URL.createObjectURL(file);
-
-          img.onload = () => {
-            const W = 1080,
-              H = 1920;
-            const canvas = document.createElement("canvas");
-            canvas.width = W;
-            canvas.height = H;
-            const ctx = canvas.getContext("2d");
-
-            ctx.fillStyle = "#f7f2e8";
-            ctx.fillRect(0, 0, W, H);
-
-            const scale = Math.max(W / img.width, H / img.height);
-            const sw = img.width * scale,
-              sh = img.height * scale;
-            ctx.drawImage(img, (W - sw) / 2, (H - sh) / 2, sw, sh);
-            URL.revokeObjectURL(objectUrl);
-
-            const stripH = 320;
-            ctx.fillStyle = "rgba(247, 242, 232, 0.88)";
-            ctx.fillRect(0, 0, W, stripH);
-
-            const shareText = buildShareText();
-            ctx.fillStyle = "#1a1008";
-            ctx.textAlign = "center";
-            ctx.font = "bold 52px Georgia, serif";
-            const words = shareText.split(" ");
-            const lines = [];
-            let line = "";
-            for (const word of words) {
-              const test = line ? line + " " + word : word;
-              if (ctx.measureText(test).width > W - 120) {
-                lines.push(line);
-                line = word;
-              } else {
-                line = test;
-              }
-            }
-            if (line) lines.push(line);
-            const lineH = 68,
-              urlLineH = 52;
-            const startY =
-              (stripH - (lines.length * lineH + urlLineH + 16)) / 2 + 52;
-            lines.forEach((l, i) => ctx.fillText(l, W / 2, startY + i * lineH));
-
-            ctx.font = "42px Georgia, serif";
-            ctx.fillStyle = "#b5451b";
-            ctx.fillText(
-              APP_URL,
-              W / 2,
-              startY + lines.length * lineH + 16 + urlLineH,
-            );
-
-            canvas.toBlob(
-              (blob) => {
-                if (!blob) return;
-                _sharePendingFile = new File([blob], "score.jpg", {
-                  type: "image/jpeg",
-                });
-                const previewImg = document.getElementById("share-preview-img");
-                previewImg.src = URL.createObjectURL(blob);
-                document
-                  .getElementById("share-preview-overlay")
-                  .classList.add("show");
-              },
-              "image/jpeg",
-              0.92,
-            );
-          };
-
-          img.onerror = () => URL.revokeObjectURL(objectUrl);
-          img.src = objectUrl;
+          img.onload = () => buildScoreCard(img);
+          img.src = snap.toDataURL("image/jpeg", 0.95);
         });
+
+      function buildScoreCard(img) {
+        const W = 1080,
+          H = 1920;
+        const canvas = document.createElement("canvas");
+        canvas.width = W;
+        canvas.height = H;
+        const ctx = canvas.getContext("2d");
+
+        ctx.fillStyle = "#f7f2e8";
+        ctx.fillRect(0, 0, W, H);
+
+        // Front camera gives a mirrored image — flip it back to natural orientation
+        ctx.save();
+        ctx.translate(W, 0);
+        ctx.scale(-1, 1);
+        const scale = Math.max(W / img.width, H / img.height);
+        const sw = img.width * scale,
+          sh = img.height * scale;
+        ctx.drawImage(img, (W - sw) / 2, (H - sh) / 2, sw, sh);
+        ctx.restore();
+
+        const stripH = 320;
+        ctx.fillStyle = "rgba(247, 242, 232, 0.88)";
+        ctx.fillRect(0, 0, W, stripH);
+
+        const shareText = buildShareText();
+        ctx.fillStyle = "#1a1008";
+        ctx.textAlign = "center";
+        ctx.font = "bold 52px Georgia, serif";
+        const words = shareText.split(" ");
+        const lines = [];
+        let line = "";
+        for (const word of words) {
+          const test = line ? line + " " + word : word;
+          if (ctx.measureText(test).width > W - 120) {
+            lines.push(line);
+            line = word;
+          } else {
+            line = test;
+          }
+        }
+        if (line) lines.push(line);
+        const lineH = 68,
+          urlLineH = 52;
+        const startY =
+          (stripH - (lines.length * lineH + urlLineH + 16)) / 2 + 52;
+        lines.forEach((l, i) => ctx.fillText(l, W / 2, startY + i * lineH));
+
+        ctx.font = "42px Georgia, serif";
+        ctx.fillStyle = "#b5451b";
+        ctx.fillText(
+          APP_URL,
+          W / 2,
+          startY + lines.length * lineH + 16 + urlLineH,
+        );
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) return;
+            _sharePendingFile = new File([blob], "score.jpg", {
+              type: "image/jpeg",
+            });
+            const previewImg = document.getElementById("share-preview-img");
+            previewImg.src = URL.createObjectURL(blob);
+            document
+              .getElementById("share-preview-overlay")
+              .classList.add("show");
+          },
+          "image/jpeg",
+          0.92,
+        );
+      }
 
       // Confirm tap — THIS is the fresh user gesture for navigator.share()
       document
@@ -2252,6 +2363,6 @@
       </button>
     </div>
     <!-- !! END DEBUG !! -->
-    <div class="version-tag">v1.3.21</div>
+    <div class="version-tag">v1.3.22</div>
   </body>
 </html>
