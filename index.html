@@ -687,10 +687,6 @@
         justify-content: flex-end;
         align-items: center;
       }
-      .leaderboard-card .lb-header-center {
-        flex: 0 0 auto;
-        text-align: center;
-      }
       .leaderboard-card .lb-subtitle {
         font-size: 0.75rem;
         letter-spacing: 0.18em;
@@ -1033,12 +1029,10 @@
     <div class="leaderboard-overlay" id="leaderboard-overlay">
       <div class="leaderboard-card">
         <button class="dialog-close" id="lb-close" aria-label="Close">✕</button>
+        <h2>Leaderboard</h2>
         <div class="lb-header-row">
           <div class="lb-header-spacer"></div>
-          <div class="lb-header-center">
-            <h2>Leaderboard</h2>
-            <div class="lb-subtitle">Ten fastest times</div>
-          </div>
+          <div class="lb-subtitle">Ten fastest times</div>
           <div class="lb-header-end">
             <button class="lb-refresh" id="lb-refresh" title="Refresh">
               ↻
@@ -2055,6 +2049,6 @@
       <span class="tm-value" id="timer-display">0:00</span>
     </div>
 
-    <div class="version-tag">v1.3.30</div>
+    <div class="version-tag">v1.3.31</div>
   </body>
 </html>
