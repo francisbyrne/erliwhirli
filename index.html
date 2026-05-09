@@ -2087,6 +2087,11 @@
       }
     </script>
     <script>
+      // ── DEBUG: pre-set completed time so share text works without finishing puzzle ──
+      if (!window._completedTimeStr) {
+        window._completedTimeStr = "in 42 seconds";
+        window._completedSecs = 42;
+      }
       // ── DEBUG: tap "Down" heading to show victory dialog ──
       // document
       //   .getElementById("debug-down-heading")
@@ -2098,6 +2103,39 @@
       <span class="tm-label">Time</span>
       <span class="tm-value" id="timer-display">0:00</span>
     </div>
-    <div class="version-tag">v1.3.18</div>
+    <!-- !! DEBUG ONLY — delete this whole block when done !! -->
+    <div
+      id="debug-share-btn-wrap"
+      style="
+        position: fixed;
+        bottom: 40px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 200;
+      "
+    >
+      <button
+        onclick="
+          document
+            .getElementById('share-camera-input')
+            .setAttribute('capture', 'user');
+          document.getElementById('share-camera-input').click();
+        "
+        style="
+          font-family: &quot;Source Serif 4&quot;, serif;
+          font-size: 0.85rem;
+          letter-spacing: 0.08em;
+          padding: 10px 20px;
+          background: #b5451b;
+          color: #f7f2e8;
+          border: none;
+          cursor: pointer;
+        "
+      >
+        ⚙ DEBUG: Share to Instagram
+      </button>
+    </div>
+    <!-- !! END DEBUG !! -->
+    <div class="version-tag">v1.3.19</div>
   </body>
 </html>
