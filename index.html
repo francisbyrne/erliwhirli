@@ -1390,14 +1390,6 @@
         const overlay = document.getElementById("leaderboard-overlay");
         overlay.classList.add("show");
         loadLeaderboard();
-        // Show share button only on mobile and only after completing the puzzle
-        const shareSection = document.getElementById("lb-share-section");
-        const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(
-          navigator.userAgent,
-        );
-        if (shareSection && window._completedTimeStr && isMobile) {
-          shareSection.style.display = "block";
-        }
       }
 
       function loadLeaderboard() {
@@ -1474,6 +1466,27 @@
                 </tr></thead>
                 <tbody>${rows_html}</tbody>
               </table>`;
+
+            // Show share button if the current user appears in the leaderboard,
+            // using their leaderboard time (works even after a page refresh).
+            const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(
+              navigator.userAgent,
+            );
+            const shareSection = document.getElementById("lb-share-section");
+            if (isMobile && shareSection) {
+              const myEntry = entries.find((e) => e.userId === myId);
+              if (myEntry) {
+                const mins = Math.floor(myEntry.secs / 60);
+                const secs = myEntry.secs % 60;
+                const timeStr =
+                  mins > 0 ? `in ${mins}m ${secs}s` : `in ${myEntry.secs}s`;
+                document.getElementById("share-instagram").dataset.timeStr =
+                  timeStr;
+                shareSection.style.display = "block";
+              } else {
+                shareSection.style.display = "none";
+              }
+            }
           } catch (err) {
             body.innerHTML =
               '<div class="lb-error">Couldn\'t parse the leaderboard data.</div>';
@@ -1505,15 +1518,16 @@
       });
 
       // ── SHARE BUTTONS ──
-      function buildShareText() {
+      function buildShareText(timeStr) {
         const title = "Erly Whirly Thirsdly Mini";
-        const timeStr = window._completedTimeStr || "";
         return `I solved the ${title} crossword ${timeStr}! 🧩 Can you beat my time?`;
       }
 
       // ── SHARE SCORE ──
       function openShare() {
-        const shareText = buildShareText();
+        const timeStr =
+          document.getElementById("share-instagram").dataset.timeStr || "";
+        const shareText = buildShareText(timeStr);
         if (navigator.share) {
           navigator.share({ text: shareText, url: APP_URL }).catch(() => {});
         } else {
@@ -1914,8 +1928,6 @@
                 ? `in ${secs} second${secs === 1 ? "" : "s"}`
                 : `in ${Math.floor(secs / 60)}m ${secs % 60}s`;
 
-            window._completedTimeStr = timeStr;
-            window._completedSecs = secs;
             _showVictory(timeStr, secs);
           } else {
             errorEl.classList.add("show");
@@ -2049,6 +2061,6 @@
       <span class="tm-value" id="timer-display">0:00</span>
     </div>
 
-    <div class="version-tag">v1.3.31</div>
+    <div class="version-tag">v1.3.33</div>
   </body>
 </html>
