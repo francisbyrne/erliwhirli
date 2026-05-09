@@ -1045,7 +1045,7 @@
           id="lb-share-section"
           style="display: none"
         >
-          <button class="lb-share-btn" id="share-instagram">
+          <button class="lb-share-btn" id="share-score">
             Share your score ↗
           </button>
         </div>
@@ -1344,6 +1344,25 @@
 
       // Submit a score via JSONP (avoids CORS issues with Apps Script).
       // Returns a Promise that resolves true/false once the sheet confirms.
+      function getBrowserName() {
+        const ua = navigator.userAgent;
+        if (/Instagram/.test(ua)) return "Instagram";
+        if (/FBAV|FBAN|FB_IAB/.test(ua)) return "Facebook";
+        if (/wv|WebView/.test(ua) && /Android/.test(ua))
+          return "Android WebView";
+        if (/CriOS/.test(ua)) return "Chrome (iOS)";
+        if (/FxiOS/.test(ua)) return "Firefox (iOS)";
+        if (/EdgiOS/.test(ua)) return "Edge (iOS)";
+        if (/OPiOS/.test(ua)) return "Opera (iOS)";
+        if (/SamsungBrowser/.test(ua)) return "Samsung Internet";
+        if (/OPR|Opera/.test(ua)) return "Opera";
+        if (/Edg\//.test(ua)) return "Edge";
+        if (/Chrome/.test(ua) && /Safari/.test(ua)) return "Chrome";
+        if (/Firefox/.test(ua)) return "Firefox";
+        if (/Safari/.test(ua)) return "Safari";
+        return "Unknown";
+      }
+
       function submitScore(name, timeSeconds) {
         return new Promise((resolve) => {
           const callbackName = "_submitCallback_" + Date.now();
@@ -1352,7 +1371,8 @@
             `?callback=${encodeURIComponent(callbackName)}` +
             `&name=${encodeURIComponent(name)}` +
             `&time_seconds=${encodeURIComponent(timeSeconds)}` +
-            `&user_id=${encodeURIComponent(getUserId())}`;
+            `&user_id=${encodeURIComponent(getUserId())}` +
+            `&browser=${encodeURIComponent(getBrowserName())}`;
 
           const timeout = setTimeout(() => {
             delete window[callbackName];
@@ -1480,7 +1500,7 @@
                 const secs = myEntry.secs % 60;
                 const timeStr =
                   mins > 0 ? `in ${mins}m ${secs}s` : `in ${myEntry.secs}s`;
-                document.getElementById("share-instagram").dataset.timeStr =
+                document.getElementById("share-score").dataset.timeStr =
                   timeStr;
                 shareSection.style.display = "block";
               } else {
@@ -1526,7 +1546,7 @@
       // ── SHARE SCORE ──
       function openShare() {
         const timeStr =
-          document.getElementById("share-instagram").dataset.timeStr || "";
+          document.getElementById("share-score").dataset.timeStr || "";
         const shareText = buildShareText(timeStr);
         if (navigator.share) {
           navigator.share({ text: shareText, url: APP_URL }).catch(() => {});
@@ -1544,7 +1564,7 @@
       }
 
       document
-        .getElementById("share-instagram")
+        .getElementById("share-score")
         .addEventListener("click", openShare);
 
       document
@@ -2061,6 +2081,6 @@
       <span class="tm-value" id="timer-display">0:00</span>
     </div>
 
-    <div class="version-tag">v1.3.33</div>
+    <div class="version-tag">v1.3.34</div>
   </body>
 </html>
