@@ -1667,16 +1667,31 @@
           stopCamera();
 
           buildScoreCard(snap, (file) => {
+            const shareText = buildShareText();
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              navigator.share({ files: [file] }).catch(() => {});
+              // Try image + text together; some browsers drop the file if text is included,
+              // so if that fails we fall back to text+url only (still tappable link).
+              navigator
+                .share({ files: [file], text: shareText + "\n" + APP_URL })
+                .catch(() => {
+                  // File share failed — try text+url only (clickable link in most apps)
+                  navigator
+                    .share({ text: shareText, url: APP_URL })
+                    .catch(() => {});
+                });
+            } else if (navigator.share) {
+              // No file sharing support — share text + clickable URL
+              navigator
+                .share({ text: shareText, url: APP_URL })
+                .catch(() => {});
             } else {
-              // Fallback: download
-              const url = URL.createObjectURL(file);
+              // Last resort: download image
+              const dlUrl = URL.createObjectURL(file);
               const a = document.createElement("a");
-              a.href = url;
+              a.href = dlUrl;
               a.download = "my-crossword-score.jpg";
               a.click();
-              setTimeout(() => URL.revokeObjectURL(url), 5000);
+              setTimeout(() => URL.revokeObjectURL(dlUrl), 5000);
             }
           });
         });
@@ -2268,6 +2283,34 @@
       <span class="tm-value" id="timer-display">0:00</span>
     </div>
 
-    <div class="version-tag">v1.3.26</div>
+    <!-- !! DEBUG ONLY — delete this whole block when done !! -->
+    <div
+      id="debug-share-btn-wrap"
+      style="
+        position: fixed;
+        bottom: 40px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 200;
+      "
+    >
+      <button
+        onclick="openShareCamera()"
+        style="
+          font-family: &quot;Source Serif 4&quot;, serif;
+          font-size: 0.85rem;
+          letter-spacing: 0.08em;
+          padding: 10px 20px;
+          background: #b5451b;
+          color: #f7f2e8;
+          border: none;
+          cursor: pointer;
+        "
+      >
+        ⚙ DEBUG: Share to Instagram
+      </button>
+    </div>
+    <!-- !! END DEBUG !! -->
+    <div class="version-tag">v1.3.27</div>
   </body>
 </html>
