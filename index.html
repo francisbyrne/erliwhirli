@@ -728,6 +728,80 @@
       }
 
       /* ── SHARE ROW ── */
+      /* ── SHARE PREVIEW MODAL ── */
+      .share-preview-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(26, 16, 8, 0.7);
+        backdrop-filter: blur(4px);
+        z-index: 300;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        gap: 16px;
+      }
+      .share-preview-overlay.show {
+        display: flex;
+      }
+      .share-preview-img {
+        max-width: min(340px, 100%);
+        max-height: 55vh;
+        object-fit: contain;
+        border: 3px solid #f7f2e8;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      }
+      .share-preview-hint {
+        font-family: "Source Serif 4", serif;
+        font-size: 0.8rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #c9b99a;
+        text-align: center;
+      }
+      .share-preview-btns {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: min(340px, 100%);
+      }
+      .share-preview-confirm {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 13px 18px;
+        font-family: "Source Serif 4", serif;
+        font-size: 0.88rem;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        border: none;
+        background: var(--ink);
+        color: var(--paper);
+        transition: background 0.15s;
+      }
+      .share-preview-confirm:hover {
+        background: var(--accent);
+      }
+      .share-preview-cancel {
+        padding: 10px 18px;
+        font-family: "Source Serif 4", serif;
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        border: 2px solid #c9b99a;
+        background: transparent;
+        color: #c9b99a;
+        text-align: center;
+        transition:
+          background 0.15s,
+          color 0.15s;
+      }
+      .share-preview-cancel:hover {
+        background: rgba(201, 185, 154, 0.15);
+      }
+
       /* ── SHARE (mobile only) ── */
       .lb-share-section {
         margin-top: 20px;
@@ -1019,6 +1093,45 @@
             capture="user"
           />
         </div>
+      </div>
+    </div>
+
+    <!-- Share preview modal -->
+    <div class="share-preview-overlay" id="share-preview-overlay">
+      <div class="share-preview-hint">Preview — tap to share</div>
+      <img
+        class="share-preview-img"
+        id="share-preview-img"
+        src=""
+        alt="Score card preview"
+      />
+      <div class="share-preview-btns">
+        <button class="share-preview-confirm" id="share-preview-confirm">
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="2" y="2" width="20" height="20" rx="5" />
+            <circle cx="12" cy="12" r="5" />
+            <circle
+              cx="17.5"
+              cy="6.5"
+              r="1"
+              fill="currentColor"
+              stroke="none"
+            />
+          </svg>
+          Share to Instagram Story
+        </button>
+        <button class="share-preview-cancel" id="share-preview-cancel">
+          Retake / Cancel
+        </button>
       </div>
     </div>
 
@@ -1482,32 +1595,36 @@
       }
 
       // ── INSTAGRAM STORY SHARE ──
-      // Step 1: button click → trigger front camera via hidden file input
+      // ── INSTAGRAM STORY SHARE ──
+      // navigator.share() requires *fresh* transient user activation.
+      // Taking a photo expires that activation, so we can't call share()
+      // inside the async camera pipeline. Instead we show a preview, and
+      // the user's tap on "Share" is the fresh gesture we need.
+
+      let _sharePendingFile = null;
+
+      function openShareCamera() {
+        const camInput = document.getElementById("share-camera-input");
+        camInput.setAttribute("capture", "user"); // front/selfie camera
+        camInput.click();
+      }
+
       document
         .getElementById("share-instagram")
-        .addEventListener("click", () => {
-          const camInput = document.getElementById("share-camera-input");
-          // Reinforce front-camera hint at click time — some browsers re-read
-          // the attribute only when the input is triggered, not at parse time.
-          camInput.setAttribute("capture", "user");
-          camInput.click();
-        });
+        .addEventListener("click", openShareCamera);
 
-      // Step 2: user picks/takes a photo → read it, draw onto canvas, share
+      // Photo confirmed → build canvas → show preview (don't share yet)
       document
         .getElementById("share-camera-input")
         .addEventListener("change", (e) => {
           const file = e.target.files && e.target.files[0];
           if (!file) return;
-
-          const btn = document.getElementById("share-instagram");
-          btn.disabled = true;
-          btn.textContent = "Preparing…";
+          e.target.value = "";
 
           const img = new Image();
           const objectUrl = URL.createObjectURL(file);
+
           img.onload = () => {
-            // Draw photo onto a 9:16 canvas (Instagram Stories ratio) then share via Web Share API
             const W = 1080,
               H = 1920;
             const canvas = document.createElement("canvas");
@@ -1515,22 +1632,19 @@
             canvas.height = H;
             const ctx = canvas.getContext("2d");
 
-            // Fill background with paper colour
             ctx.fillStyle = "#f7f2e8";
             ctx.fillRect(0, 0, W, H);
 
-            // Draw photo centred, cover-cropped to fill canvas
             const scale = Math.max(W / img.width, H / img.height);
             const sw = img.width * scale,
               sh = img.height * scale;
             ctx.drawImage(img, (W - sw) / 2, (H - sh) / 2, sw, sh);
+            URL.revokeObjectURL(objectUrl);
 
-            // Semi-transparent overlay strip at TOP for text + URL
             const stripH = 320;
             ctx.fillStyle = "rgba(247, 242, 232, 0.88)";
             ctx.fillRect(0, 0, W, stripH);
 
-            // Score text (word-wrapped)
             const shareText = buildShareText();
             ctx.fillStyle = "#1a1008";
             ctx.textAlign = "center";
@@ -1548,14 +1662,12 @@
               }
             }
             if (line) lines.push(line);
-            const lineH = 68;
-            // Centre the text block vertically within the strip, leave room for URL line
-            const urlLineH = 52;
-            const textBlockH = lines.length * lineH + urlLineH + 16;
-            const startY = (stripH - textBlockH) / 2 + 52;
+            const lineH = 68,
+              urlLineH = 52;
+            const startY =
+              (stripH - (lines.length * lineH + urlLineH + 16)) / 2 + 52;
             lines.forEach((l, i) => ctx.fillText(l, W / 2, startY + i * lineH));
 
-            // App URL below the score text
             ctx.font = "42px Georgia, serif";
             ctx.fillStyle = "#b5451b";
             ctx.fillText(
@@ -1564,61 +1676,59 @@
               startY + lines.length * lineH + 16 + urlLineH,
             );
 
-            URL.revokeObjectURL(objectUrl);
-
-            // Convert canvas to blob then share via the native Web Share API.
-            // IMPORTANT: pass `files` only — mixing in title/text causes browsers
-            // to silently drop the file and share text instead.
             canvas.toBlob(
               (blob) => {
-                if (!blob) {
-                  resetShareBtn(btn);
-                  return;
-                }
-
-                const imageFile = new File([blob], "score.jpg", {
+                if (!blob) return;
+                _sharePendingFile = new File([blob], "score.jpg", {
                   type: "image/jpeg",
                 });
-
-                if (
-                  navigator.canShare &&
-                  navigator.canShare({ files: [imageFile] })
-                ) {
-                  // Native share sheet — user picks Instagram (or any other app)
-                  navigator
-                    .share({ files: [imageFile] })
-                    .then(() => resetShareBtn(btn))
-                    .catch((err) => {
-                      // AbortError = user cancelled; anything else is a real failure
-                      resetShareBtn(btn);
-                    });
-                } else {
-                  // Web Share API not available — prompt user to save and share manually
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = "my-crossword-score.jpg";
-                  a.click();
-                  setTimeout(() => URL.revokeObjectURL(url), 5000);
-                  resetShareBtn(btn);
-                  alert(
-                    "Image saved! Open Instagram and share it to your Story.",
-                  );
-                }
+                const previewImg = document.getElementById("share-preview-img");
+                previewImg.src = URL.createObjectURL(blob);
+                document
+                  .getElementById("share-preview-overlay")
+                  .classList.add("show");
               },
               "image/jpeg",
               0.92,
             );
           };
-          img.onerror = () => {
-            URL.revokeObjectURL(objectUrl);
-            resetShareBtn(btn);
-          };
-          img.src = objectUrl;
 
-          // Reset input so same photo can be retaken
-          e.target.value = "";
+          img.onerror = () => URL.revokeObjectURL(objectUrl);
+          img.src = objectUrl;
         });
+
+      // Confirm tap — THIS is the fresh user gesture for navigator.share()
+      document
+        .getElementById("share-preview-confirm")
+        .addEventListener("click", () => {
+          if (!_sharePendingFile) return;
+          const file = _sharePendingFile;
+          closeSharePreview();
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({ files: [file] }).catch(() => {});
+          } else {
+            const url = URL.createObjectURL(file);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "my-crossword-score.jpg";
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+          }
+        });
+
+      document
+        .getElementById("share-preview-cancel")
+        .addEventListener("click", closeSharePreview);
+
+      function closeSharePreview() {
+        const overlay = document.getElementById("share-preview-overlay");
+        overlay.classList.remove("show");
+        const previewImg = document.getElementById("share-preview-img");
+        if (previewImg.src.startsWith("blob:"))
+          URL.revokeObjectURL(previewImg.src);
+        previewImg.src = "";
+        _sharePendingFile = null;
+      }
 
       function resetShareBtn(btn) {
         btn.disabled = false;
@@ -2126,12 +2236,7 @@
       "
     >
       <button
-        onclick="
-          document
-            .getElementById('share-camera-input')
-            .setAttribute('capture', 'user');
-          document.getElementById('share-camera-input').click();
-        "
+        onclick="openShareCamera()"
         style="
           font-family: &quot;Source Serif 4&quot;, serif;
           font-size: 0.85rem;
@@ -2147,6 +2252,6 @@
       </button>
     </div>
     <!-- !! END DEBUG !! -->
-    <div class="version-tag">v1.3.20</div>
+    <div class="version-tag">v1.3.21</div>
   </body>
 </html>
