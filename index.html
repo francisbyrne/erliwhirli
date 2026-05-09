@@ -921,6 +921,7 @@
       // ─── PLAYER NAME ──────────────────────────────────────────────────────────────
       const LS_KEY = "crossword_player_name";
       const LS_USER_ID_KEY = "crossword_user_id";
+      const LS_START_TIME_KEY = "crossword_start_time";
 
       function getUserId() {
         let id = localStorage.getItem(LS_USER_ID_KEY);
@@ -1367,7 +1368,9 @@
         let activeWord = WORDS[0];
         let activeCellIdx = 0;
         const gridValues = {};
-        let startTime = null;
+        let startTime = localStorage.getItem(LS_START_TIME_KEY)
+          ? parseInt(localStorage.getItem(LS_START_TIME_KEY), 10)
+          : null;
         let puzzleDone = false;
         let hasShaken = false;
 
@@ -1523,7 +1526,10 @@
             .slice(-1)
             .toUpperCase();
           if (!letter) return;
-          if (!startTime) startTime = Date.now();
+          if (!startTime) {
+            startTime = Date.now();
+            localStorage.setItem(LS_START_TIME_KEY, startTime);
+          }
           const { r, c } = activeWord.cells[activeCellIdx];
           setVal(r, c, letter);
           advanceInWord();
@@ -1651,6 +1657,7 @@
 
           if (allCorrect) {
             puzzleDone = true;
+            localStorage.removeItem(LS_START_TIME_KEY);
             errorEl.classList.remove("show");
             const secs = Math.round((Date.now() - startTime) / 1000);
             const timeStr =
@@ -1767,6 +1774,6 @@
       //     showVictory("in 42 seconds", 42);
       //   });
     </script>
-    <div class="version-tag">v1.3.10</div>
+    <div class="version-tag">v1.3.11</div>
   </body>
 </html>
