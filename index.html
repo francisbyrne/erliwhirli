@@ -43,6 +43,54 @@
         position: relative;
       }
 
+      /* ── TIMER (bottom-right) ── */
+      #timer-corner {
+        position: fixed;
+        bottom: 18px;
+        right: 18px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        z-index: 50;
+        padding: 5px 10px;
+        border-radius: 3px;
+        border-bottom: 1.5px solid #c9b99a;
+        opacity: 0;
+        transition: opacity 0.4s;
+        pointer-events: none;
+      }
+      #timer-corner.visible {
+        opacity: 1;
+      }
+      #timer-corner .tm-label {
+        font-family: "Source Serif 4", serif;
+        font-size: 0.78rem;
+        letter-spacing: 0.12em;
+        color: #8a7060;
+        text-transform: uppercase;
+      }
+      #timer-corner .tm-value {
+        font-family: "Playfair Display", serif;
+        font-size: 0.95rem;
+        color: var(--ink);
+        min-width: 3.2ch;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      @media (max-width: 480px) {
+        #timer-corner {
+          bottom: 12px;
+          right: 12px;
+          padding: 4px 8px;
+        }
+        #timer-corner .tm-label {
+          font-size: 0.72rem;
+        }
+        #timer-corner .tm-value {
+          font-size: 0.88rem;
+        }
+      }
+
       /* ── PLAYER NAME (top-right) ── */
       #player-name-corner {
         position: fixed;
@@ -758,7 +806,7 @@
       .version-tag {
         position: fixed;
         bottom: 10px;
-        right: 14px;
+        left: 14px;
         font-family: "Source Serif 4", serif;
         font-size: 0.65rem;
         color: #c9b99a;
@@ -1371,6 +1419,39 @@
         let startTime = localStorage.getItem(LS_START_TIME_KEY)
           ? parseInt(localStorage.getItem(LS_START_TIME_KEY), 10)
           : null;
+        let timerInterval = null;
+
+        function formatElapsed(ms) {
+          const totalSecs = Math.floor(ms / 1000);
+          const mins = Math.floor(totalSecs / 60);
+          const secs = totalSecs % 60;
+          return mins > 0
+            ? `${mins}:${String(secs).padStart(2, "0")}`
+            : `0:${String(secs).padStart(2, "0")}`;
+        }
+
+        function tickTimer() {
+          const el = document.getElementById("timer-display");
+          if (el && startTime)
+            el.textContent = formatElapsed(Date.now() - startTime);
+        }
+
+        function startTimer() {
+          const corner = document.getElementById("timer-corner");
+          if (corner) corner.classList.add("visible");
+          tickTimer();
+          if (!timerInterval) timerInterval = setInterval(tickTimer, 1000);
+        }
+
+        function stopTimer() {
+          if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+          }
+        }
+
+        // Resume timer if startTime was restored from localStorage
+        if (startTime) startTimer();
         let puzzleDone = false;
         let hasShaken = false;
 
@@ -1529,6 +1610,7 @@
           if (!startTime) {
             startTime = Date.now();
             localStorage.setItem(LS_START_TIME_KEY, startTime);
+            startTimer();
           }
           const { r, c } = activeWord.cells[activeCellIdx];
           setVal(r, c, letter);
@@ -1658,6 +1740,7 @@
           if (allCorrect) {
             puzzleDone = true;
             localStorage.removeItem(LS_START_TIME_KEY);
+            stopTimer();
             errorEl.classList.remove("show");
             const secs = Math.round((Date.now() - startTime) / 1000);
             const timeStr =
@@ -1774,6 +1857,10 @@
       //     showVictory("in 42 seconds", 42);
       //   });
     </script>
-    <div class="version-tag">v1.3.11</div>
+    <div id="timer-corner">
+      <span class="tm-label">Time</span>
+      <span class="tm-value" id="timer-display">0:00</span>
+    </div>
+    <div class="version-tag">v1.3.13</div>
   </body>
 </html>
