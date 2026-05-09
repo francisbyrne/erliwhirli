@@ -673,12 +673,17 @@
         font-size: 1.4rem;
         margin-bottom: 6px;
       }
+      .leaderboard-card .lb-subtitle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
       .leaderboard-card .lb-subtitle {
         font-size: 0.75rem;
         letter-spacing: 0.18em;
         text-transform: uppercase;
         color: #8a7060;
-        margin-bottom: 24px;
       }
       .leaderboard-card .lb-loading {
         font-size: 0.85rem;
@@ -742,12 +747,7 @@
       .lb-table tr:last-child td {
         border-bottom: none;
       }
-      .leaderboard-card .lb-btn-row {
-        margin-top: 24px;
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-      }
+
       .leaderboard-card .lb-close,
       .leaderboard-card .lb-refresh {
         padding: 10px 22px;
@@ -770,16 +770,19 @@
       }
       .leaderboard-card .lb-refresh {
         background: transparent;
-        color: var(--ink);
-        border: 2px solid var(--ink);
+        color: #8a7060;
+        border: none;
+        padding: 2px 6px;
+        font-size: 1rem;
+        line-height: 1;
+        cursor: pointer;
+        transition: color 0.15s;
       }
       .leaderboard-card .lb-refresh:hover {
-        background: var(--ink);
-        color: var(--paper);
+        color: var(--ink);
+        background: transparent;
       }
 
-      /* ── SHARE ROW ── */
-      /* ── CAMERA VIEWFINDER MODAL ── */
       /* ── SHARE (mobile only) ── */
       .lb-share-section {
         margin-top: 20px;
@@ -787,13 +790,7 @@
         border-top: 1px solid #d4c9b0;
         text-align: center;
       }
-      .lb-share-label {
-        font-size: 0.7rem;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-        color: #8a7060;
-        margin-bottom: 12px;
-      }
+
       .lb-share-btn {
         display: inline-flex;
         align-items: center;
@@ -1025,17 +1022,16 @@
       <div class="leaderboard-card">
         <button class="dialog-close" id="lb-close" aria-label="Close">✕</button>
         <h2>Leaderboard</h2>
-        <div class="lb-subtitle">Top 10 fastest times</div>
-        <div id="lb-body"><div class="lb-loading">Loading…</div></div>
-        <div class="lb-btn-row">
-          <button class="lb-refresh" id="lb-refresh">↻ Refresh</button>
+        <div class="lb-subtitle-row">
+          <div class="lb-subtitle">Ten fastest times</div>
+          <button class="lb-refresh" id="lb-refresh" title="Refresh">↻</button>
         </div>
+        <div id="lb-body"><div class="lb-loading">Loading…</div></div>
         <div
           class="lb-share-section"
           id="lb-share-section"
           style="display: none"
         >
-          <div class="lb-share-label">Share your score</div>
           <button class="lb-share-btn" id="share-instagram">
             Share your score ↗
           </button>
@@ -2040,38 +2036,6 @@
       <span class="tm-value" id="timer-display">0:00</span>
     </div>
 
-    <!-- !! DEBUG ONLY — delete this whole block when done !! -->
-    <div
-      id="debug-share-btn-wrap"
-      style="
-        position: fixed;
-        bottom: 40px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 200;
-      "
-    >
-      <button
-        onclick="
-          window._completedTimeStr = 'in 42 seconds';
-          window._completedSecs = 42;
-          openShare();
-        "
-        style="
-          font-family: &quot;Source Serif 4&quot;, serif;
-          font-size: 0.85rem;
-          letter-spacing: 0.08em;
-          padding: 10px 20px;
-          background: #b5451b;
-          color: #f7f2e8;
-          border: none;
-          cursor: pointer;
-        "
-      >
-        ⚙ DEBUG: Share score
-      </button>
-    </div>
-    <!-- !! END DEBUG !! -->
-    <div class="version-tag">v1.3.28</div>
+    <div class="version-tag">v1.3.29</div>
   </body>
 </html>
