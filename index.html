@@ -671,13 +671,25 @@
       .leaderboard-card h2 {
         font-family: "Playfair Display", serif;
         font-size: 1.4rem;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
       }
-      .leaderboard-card .lb-subtitle-row {
+      .leaderboard-card .lb-header-row {
         display: flex;
         align-items: center;
-        justify-content: space-between;
         margin-bottom: 24px;
+      }
+      .leaderboard-card .lb-header-spacer,
+      .leaderboard-card .lb-header-end {
+        flex: 1;
+      }
+      .leaderboard-card .lb-header-end {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+      }
+      .leaderboard-card .lb-header-center {
+        flex: 0 0 auto;
+        text-align: center;
       }
       .leaderboard-card .lb-subtitle {
         font-size: 0.75rem;
@@ -1021,10 +1033,17 @@
     <div class="leaderboard-overlay" id="leaderboard-overlay">
       <div class="leaderboard-card">
         <button class="dialog-close" id="lb-close" aria-label="Close">✕</button>
-        <h2>Leaderboard</h2>
-        <div class="lb-subtitle-row">
-          <div class="lb-subtitle">Ten fastest times</div>
-          <button class="lb-refresh" id="lb-refresh" title="Refresh">↻</button>
+        <div class="lb-header-row">
+          <div class="lb-header-spacer"></div>
+          <div class="lb-header-center">
+            <h2>Leaderboard</h2>
+            <div class="lb-subtitle">Ten fastest times</div>
+          </div>
+          <div class="lb-header-end">
+            <button class="lb-refresh" id="lb-refresh" title="Refresh">
+              ↻
+            </button>
+          </div>
         </div>
         <div id="lb-body"><div class="lb-loading">Loading…</div></div>
         <div
@@ -2036,6 +2055,6 @@
       <span class="tm-value" id="timer-display">0:00</span>
     </div>
 
-    <div class="version-tag">v1.3.29</div>
+    <div class="version-tag">v1.3.30</div>
   </body>
 </html>
