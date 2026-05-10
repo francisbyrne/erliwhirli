@@ -1638,8 +1638,12 @@
           }
         }
 
-        // Resume timer if startTime was restored from localStorage
-        if (startTime) startTimer();
+        // Start timer immediately on puzzle load (or resume if restored from localStorage)
+        if (!startTime) {
+          startTime = Date.now();
+          localStorage.setItem(LS_START_TIME_KEY, startTime);
+        }
+        startTimer();
         let puzzleDone = false;
         let hasShaken = false;
 
@@ -1795,11 +1799,7 @@
             .slice(-1)
             .toUpperCase();
           if (!letter) return;
-          if (!startTime) {
-            startTime = Date.now();
-            localStorage.setItem(LS_START_TIME_KEY, startTime);
-            startTimer();
-          }
+
           const { r, c } = activeWord.cells[activeCellIdx];
           setVal(r, c, letter);
           advanceInWord();
@@ -2080,6 +2080,6 @@
       <span class="acb-text" id="acb-text"></span>
     </div>
 
-    <div class="version-tag">v1.3.37</div>
+    <div class="version-tag">v1.3.38</div>
   </body>
 </html>
