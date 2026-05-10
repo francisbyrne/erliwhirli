@@ -174,8 +174,16 @@
       }
 
       /* ── CLEAR BUTTON ── */
+      .grid-above-row {
+        width: 100%;
+        max-width: calc(
+          5 * var(--cell-size) + 6px
+        ); /* match grid width incl border */
+        display: flex;
+        justify-content: flex-start;
+        margin-bottom: 4px;
+      }
       #clear-btn {
-        margin-top: 8px;
         background: none;
         border: none;
         color: #c9b99a;
@@ -184,7 +192,7 @@
         letter-spacing: 0.15em;
         text-transform: uppercase;
         cursor: pointer;
-        padding: 4px 8px;
+        padding: 2px 0;
         transition: color 0.15s;
       }
       #clear-btn:hover {
@@ -946,8 +954,6 @@
       <h1>Erly Whirly Thirsdly Mini</h1>
       <div class="byline">Thursday's Mini Crossword</div>
       <button id="header-leaderboard-btn">⟑ Leaderboard</button>
-      <br />
-      <button id="clear-btn">✕ Clear board</button>
     </header>
 
     <!-- Loading state -->
@@ -968,6 +974,9 @@
 
     <!-- Puzzle (shown after load) -->
     <div id="puzzle-container">
+      <div class="grid-above-row">
+        <button id="clear-btn">✕ Clear answers</button>
+      </div>
       <div class="grid-wrapper" id="grid-wrapper">
         <!-- Capture input covers the grid — user's finger always touches it,
              so WebView shows the keyboard on focus() calls -->
@@ -1548,13 +1557,12 @@
 
       function clearBoard() {
         localStorage.removeItem(LS_ANSWERS_KEY);
-        localStorage.removeItem(LS_START_TIME_KEY);
-        // Reload the page to reset everything cleanly
+        // Reload to reset the grid without touching the timer
         window.location.reload();
       }
 
       document.getElementById("clear-btn").addEventListener("click", () => {
-        if (confirm("Clear the board and reset the timer?")) clearBoard();
+        if (confirm("Clear all answers?")) clearBoard();
       });
 
       document
@@ -2136,6 +2144,6 @@
       <span class="acb-text" id="acb-text"></span>
     </div>
 
-    <div class="version-tag">v1.3.39</div>
+    <div class="version-tag">v1.3.41</div>
   </body>
 </html>
