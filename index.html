@@ -2049,16 +2049,20 @@
 
       // ── CLUE BAR: track visual viewport so bar stays above keyboard ──
       function updateClueBarPosition() {
+        if (!window.visualViewport) return;
+        const vv = window.visualViewport;
+        // Distance from bottom of visual viewport to bottom of layout viewport
+        const offsetFromBottom =
+          window.innerHeight - (vv.offsetTop + vv.height);
+        const lift = Math.max(0, offsetFromBottom);
+
+        // Keep clue bar just above the keyboard
         const bar = document.getElementById("active-clue-bar");
-        if (!bar) return;
-        if (window.visualViewport) {
-          // Visual Viewport API: gives us the actual visible rect
-          const vv = window.visualViewport;
-          // Distance from bottom of visual viewport to bottom of layout viewport
-          const offsetFromBottom =
-            window.innerHeight - (vv.offsetTop + vv.height);
-          bar.style.bottom = Math.max(0, offsetFromBottom) + "px";
-        }
+        if (bar) bar.style.bottom = lift + "px";
+
+        // Keep timer just above the keyboard (plus a small gap)
+        const timer = document.getElementById("timer-corner");
+        if (timer) timer.style.bottom = lift + 18 + "px";
       }
 
       if (window.visualViewport) {
@@ -2079,6 +2083,6 @@
       <span class="tm-value" id="timer-display">0:00</span>
     </div>
 
-    <div class="version-tag">v1.3.34</div>
+    <div class="version-tag">v1.3.35</div>
   </body>
 </html>
