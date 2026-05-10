@@ -490,15 +490,15 @@
       /* ── VICTORY ── */
       .victory-overlay {
         display: none;
-        position: absolute;
+        position: fixed;
         inset: 0;
-        min-height: 100%;
         background: rgba(26, 16, 8, 0.55);
         backdrop-filter: blur(3px);
         z-index: 100;
-        align-items: flex-start;
+        align-items: center;
         justify-content: center;
-        padding: 24px 24px env(safe-area-inset-bottom, 24px);
+        padding: 24px;
+        overflow-y: auto;
       }
       .victory-overlay.show {
         display: flex;
@@ -521,7 +521,6 @@
         width: calc(100% - 48px);
         animation: rise 0.4s cubic-bezier(0.22, 1, 0.36, 1);
         position: relative;
-        margin: 80px 0;
       }
       @keyframes rise {
         from {
@@ -1652,7 +1651,13 @@
         .getElementById("victory-overlay")
         .addEventListener("click", (e) => {
           if (e.target === document.getElementById("victory-overlay")) {
-            document.getElementById("victory-overlay").classList.remove("show");
+            const vo = document.getElementById("victory-overlay");
+            vo.classList.remove("show");
+            vo.style.top =
+              vo.style.left =
+              vo.style.width =
+              vo.style.height =
+                "";
             capturePaused = false;
             refocusActiveCell();
           }
@@ -1779,7 +1784,7 @@
           }
         }
 
-        // ── RESTORE SAVED ANSWERS ──-
+        // ── RESTORE SAVED ANSWERS ──
         const savedAnswers = localStorage.getItem(LS_ANSWERS_KEY);
         if (savedAnswers) {
           try {
@@ -2101,23 +2106,7 @@
           }
 
           document.getElementById("victory-overlay").classList.add("show");
-
-          // Scroll so the victory card is centred in the visible viewport,
-          // accounting for the keyboard being open on mobile.
-          setTimeout(() => {
-            const vv = window.visualViewport;
-            const viewH = vv ? vv.height : window.innerHeight;
-            const viewTop = vv ? vv.offsetTop : 0;
-            const card = document.querySelector(".victory-card");
-            if (card) {
-              const cardH = card.offsetHeight;
-              const targetScrollY = viewTop + (viewH - cardH) / 2 - 80;
-              window.scrollTo({
-                top: Math.max(0, targetScrollY),
-                behavior: "smooth",
-              });
-            }
-          }, 50);
+          setTimeout(updateVictoryOverlay, 50);
 
           // Save-name button inside victory card
           document.getElementById("victory-name-save").onclick = () => {
@@ -2151,7 +2140,13 @@
           };
 
           dismissBtn.onclick = () => {
-            document.getElementById("victory-overlay").classList.remove("show");
+            const vo = document.getElementById("victory-overlay");
+            vo.classList.remove("show");
+            vo.style.top =
+              vo.style.left =
+              vo.style.width =
+              vo.style.height =
+                "";
             capturePaused = false;
             refocusActiveCell();
           };
@@ -2181,9 +2176,23 @@
         if (timer) timer.style.bottom = (lift > 0 ? lift + 58 : 18) + "px";
       }
 
+      function updateVictoryOverlay() {
+        const overlay = document.getElementById("victory-overlay");
+        if (!overlay || !overlay.classList.contains("show")) return;
+        if (window.visualViewport) {
+          const vv = window.visualViewport;
+          overlay.style.top = vv.offsetTop + "px";
+          overlay.style.left = vv.offsetLeft + "px";
+          overlay.style.width = vv.width + "px";
+          overlay.style.height = vv.height + "px";
+        }
+      }
+
       if (window.visualViewport) {
         window.visualViewport.addEventListener("resize", updateClueBarPosition);
         window.visualViewport.addEventListener("scroll", updateClueBarPosition);
+        window.visualViewport.addEventListener("resize", updateVictoryOverlay);
+        window.visualViewport.addEventListener("scroll", updateVictoryOverlay);
       }
     </script>
     <!-- Active clue bar — visible when keyboard is open on mobile -->
@@ -2194,6 +2203,6 @@
       <span class="acb-text" id="acb-text"></span>
     </div>
 
-    <div class="version-tag">v1.3.50</div>
+    <div class="version-tag">v1.3.51</div>
   </body>
 </html>
