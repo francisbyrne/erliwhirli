@@ -1392,6 +1392,12 @@
         return "Unknown";
       }
 
+      function getDeviceType() {
+        return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+          ? "Mobile"
+          : "Desktop";
+      }
+
       function submitScore(name, timeSeconds) {
         return new Promise((resolve) => {
           const callbackName = "_submitCallback_" + Date.now();
@@ -1401,7 +1407,7 @@
             `&name=${encodeURIComponent(name)}` +
             `&time_seconds=${encodeURIComponent(timeSeconds)}` +
             `&user_id=${encodeURIComponent(getUserId())}` +
-            `&browser=${encodeURIComponent(getBrowserName())}`;
+            `&browser=${encodeURIComponent(getBrowserName() + " (" + getDeviceType() + ")")}`;
 
           const timeout = setTimeout(() => {
             delete window[callbackName];
@@ -2188,6 +2194,6 @@
       <span class="acb-text" id="acb-text"></span>
     </div>
 
-    <div class="version-tag">v1.3.49</div>
+    <div class="version-tag">v1.3.50</div>
   </body>
 </html>
