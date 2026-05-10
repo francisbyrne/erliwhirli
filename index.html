@@ -51,16 +51,12 @@
         display: flex;
         align-items: center;
         gap: 6px;
-        z-index: 50;
+        z-index: 95;
         padding: 5px 10px;
         border-radius: 3px;
         border-bottom: 1.5px solid #c9b99a;
-        opacity: 0;
-        transition: opacity 0.4s;
-        pointer-events: none;
-      }
-      #timer-corner.visible {
         opacity: 1;
+        pointer-events: none;
       }
       #timer-corner .tm-label {
         font-family: "Source Serif 4", serif;
@@ -82,6 +78,7 @@
           bottom: 12px;
           right: 12px;
           padding: 4px 8px;
+          background: var(--paper);
         }
         #timer-corner .tm-label {
           font-size: 0.72rem;
@@ -1075,6 +1072,11 @@
       </div>
     </div>
 
+    <div id="timer-corner">
+      <span class="tm-label">Time</span>
+      <span class="tm-value" id="timer-display">0:00</span>
+    </div>
+
     <script>
       // ─── SHARED STATE ─────────────────────────────────────────────────────────────
       // Controls whether per-cell inputs should refocus when activated.
@@ -2062,7 +2064,7 @@
 
         // Keep timer just above the keyboard (plus a small gap)
         const timer = document.getElementById("timer-corner");
-        if (timer) timer.style.bottom = lift + 18 + "px";
+        if (timer) timer.style.bottom = (lift > 0 ? lift + 58 : 18) + "px";
       }
 
       if (window.visualViewport) {
@@ -2078,11 +2080,6 @@
       <span class="acb-text" id="acb-text"></span>
     </div>
 
-    <div id="timer-corner">
-      <span class="tm-label">Time</span>
-      <span class="tm-value" id="timer-display">0:00</span>
-    </div>
-
-    <div class="version-tag">v1.3.35</div>
+    <div class="version-tag">v1.3.37</div>
   </body>
 </html>
