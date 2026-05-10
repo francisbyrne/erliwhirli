@@ -1518,11 +1518,8 @@
 
             // Show share button if the current user appears in the leaderboard,
             // using their leaderboard time (works even after a page refresh).
-            const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(
-              navigator.userAgent,
-            );
             const shareSection = document.getElementById("lb-share-section");
-            if (isMobile && shareSection) {
+            if (shareSection) {
               const myEntry = entries.find((e) => e.userId === myId);
               if (myEntry) {
                 const mins = Math.floor(myEntry.secs / 60);
@@ -1587,17 +1584,27 @@
         const timeStr =
           document.getElementById("share-score").dataset.timeStr || "";
         const shareText = buildShareText(timeStr);
-        if (navigator.share) {
+        const btn = document.getElementById("share-score");
+        const origLabel = btn.textContent;
+        const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(
+          navigator.userAgent,
+        );
+
+        if (isMobile && navigator.share) {
+          // Mobile: use native share sheet
           navigator.share({ text: shareText, url: APP_URL }).catch(() => {});
         } else {
-          // Fallback: copy to clipboard
+          // Desktop: always copy to clipboard
           navigator.clipboard
             .writeText(shareText + "\n" + APP_URL)
             .then(() => {
-              alert("Score copied to clipboard!");
+              btn.textContent = "✓ Copied to clipboard!";
+              setTimeout(() => {
+                btn.textContent = origLabel;
+              }, 2500);
             })
             .catch(() => {
-              alert(shareText + "\n" + APP_URL);
+              prompt("Copy your score:", shareText + "\n" + APP_URL);
             });
         }
       }
@@ -2143,6 +2150,6 @@
       <span class="acb-text" id="acb-text"></span>
     </div>
 
-    <div class="version-tag">v1.3.42</div>
+    <div class="version-tag">v1.3.44</div>
   </body>
 </html>
