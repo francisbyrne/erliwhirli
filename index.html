@@ -1518,6 +1518,8 @@
 
             // Show share button if the current user appears in the leaderboard,
             // using their leaderboard time (works even after a page refresh).
+            // Always show the share button — time comes from leaderboard if
+            // available, otherwise falls back to whatever was set at completion.
             const shareSection = document.getElementById("lb-share-section");
             if (shareSection) {
               const myEntry = entries.find((e) => e.userId === myId);
@@ -1528,10 +1530,8 @@
                   mins > 0 ? `in ${mins}m ${secs}s` : `in ${myEntry.secs}s`;
                 document.getElementById("share-score").dataset.timeStr =
                   timeStr;
-                shareSection.style.display = "block";
-              } else {
-                shareSection.style.display = "none";
               }
+              shareSection.style.display = "block";
             }
           } catch (err) {
             body.innerHTML =
@@ -2150,6 +2150,6 @@
       <span class="acb-text" id="acb-text"></span>
     </div>
 
-    <div class="version-tag">v1.3.44</div>
+    <div class="version-tag">v1.3.46</div>
   </body>
 </html>
