@@ -173,6 +173,24 @@
         color: var(--accent);
       }
 
+      /* ── CLEAR BUTTON ── */
+      #clear-btn {
+        margin-top: 8px;
+        background: none;
+        border: none;
+        color: #c9b99a;
+        font-family: "Source Serif 4", serif;
+        font-size: 0.68rem;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        cursor: pointer;
+        padding: 4px 8px;
+        transition: color 0.15s;
+      }
+      #clear-btn:hover {
+        color: var(--accent);
+      }
+
       /* ── LOADING ── */
       .loading-state {
         display: flex;
@@ -928,6 +946,8 @@
       <h1>Erly Whirly Thirsdly Mini</h1>
       <div class="byline">Thursday's Mini Crossword</div>
       <button id="header-leaderboard-btn">⟑ Leaderboard</button>
+      <br />
+      <button id="clear-btn">✕ Clear board</button>
     </header>
 
     <!-- Loading state -->
@@ -1088,6 +1108,7 @@
       const LS_KEY = "crossword_player_name";
       const LS_USER_ID_KEY = "crossword_user_id";
       const LS_START_TIME_KEY = "crossword_start_time";
+      const LS_ANSWERS_KEY = "crossword_answers";
 
       function getUserId() {
         let id = localStorage.getItem(LS_USER_ID_KEY);
@@ -1525,6 +1546,17 @@
         document.head.appendChild(script);
       }
 
+      function clearBoard() {
+        localStorage.removeItem(LS_ANSWERS_KEY);
+        localStorage.removeItem(LS_START_TIME_KEY);
+        // Reload the page to reset everything cleanly
+        window.location.reload();
+      }
+
+      document.getElementById("clear-btn").addEventListener("click", () => {
+        if (confirm("Clear the board and reset the timer?")) clearBoard();
+      });
+
       document
         .getElementById("lb-refresh")
         .addEventListener("click", loadLeaderboard);
@@ -1656,6 +1688,8 @@
             `.cell[data-r="${r}"][data-c="${c}"] .letter`,
           );
           if (el) el.textContent = letter;
+          // Persist all answers to localStorage
+          localStorage.setItem(LS_ANSWERS_KEY, JSON.stringify(gridValues));
         }
         function isWordFilled(word) {
           return word.cells.every(({ r, c }) => getVal(r, c) !== "");
@@ -1701,6 +1735,26 @@
             }
 
             gridEl.appendChild(cell);
+          }
+        }
+
+        // ── RESTORE SAVED ANSWERS ──
+        const savedAnswers = localStorage.getItem(LS_ANSWERS_KEY);
+        if (savedAnswers) {
+          try {
+            const parsed = JSON.parse(savedAnswers);
+            for (const [key, letter] of Object.entries(parsed)) {
+              const [r, c] = key.split(",").map(Number);
+              if (OPEN[r]?.[c] && letter) {
+                gridValues[key] = letter;
+                const el = document.querySelector(
+                  `.cell[data-r="${r}"][data-c="${c}"] .letter`,
+                );
+                if (el) el.textContent = letter;
+              }
+            }
+          } catch (e) {
+            /* ignore corrupt data */
           }
         }
 
@@ -1989,6 +2043,7 @@
             submitScore(existingName, secs).then((data) => {
               lbBtn.disabled = false;
               lbBtn.textContent = "Leaderboard";
+              localStorage.removeItem(LS_ANSWERS_KEY);
               if (data.duplicate) {
                 message.textContent =
                   "You've already submitted a score this week — only your first attempt counts.";
@@ -2019,6 +2074,7 @@
             submitScore(val, secs).then(() => {
               lbBtn.disabled = false;
               lbBtn.textContent = "Leaderboard";
+              localStorage.removeItem(LS_ANSWERS_KEY);
             });
             heading.textContent = `Welcome, ${val}!`;
             message.textContent =
@@ -2080,6 +2136,6 @@
       <span class="acb-text" id="acb-text"></span>
     </div>
 
-    <div class="version-tag">v1.3.38</div>
+    <div class="version-tag">v1.3.39</div>
   </body>
 </html>
