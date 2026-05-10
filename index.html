@@ -1057,7 +1057,7 @@
         <h2>Leaderboard</h2>
         <div class="lb-header-row">
           <div class="lb-header-spacer"></div>
-          <div class="lb-subtitle">Ten fastest times</div>
+          <div class="lb-subtitle">Top 5 fastest times</div>
           <div class="lb-header-end">
             <button class="lb-refresh" id="lb-refresh" title="Refresh">
               ↻
@@ -1476,17 +1476,16 @@
 
             // Parse rows: col 0 = name, col 1 = time_seconds, col 2 = completed_at, col 3 = user_id
             const myId = getUserId();
-            const entries = rows
+            const allEntries = rows
               .map((row) => ({
                 name: String(row.c[0]?.v ?? "").trim(),
                 secs: Number(row.c[1]?.v ?? Infinity),
                 userId: String(row.c[3]?.v ?? "").trim(),
               }))
               .filter((e) => e.name && isFinite(e.secs))
-              .sort((a, b) => a.secs - b.secs)
-              .slice(0, 10);
+              .sort((a, b) => a.secs - b.secs);
 
-            if (entries.length === 0) {
+            if (allEntries.length === 0) {
               body.innerHTML =
                 '<div class="lb-loading">No scores yet — be the first!</div>';
               return;
@@ -1496,7 +1495,16 @@
             const fmtTime = (s) =>
               s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
 
-            const rows_html = entries
+            // Top 5 entries
+            const top5 = allEntries.slice(0, 5);
+
+            // Find the current user's rank in the full list
+            const myRankIdx = allEntries.findIndex((e) => e.userId === myId);
+            const myEntry = myRankIdx !== -1 ? allEntries[myRankIdx] : null;
+            const myRank = myRankIdx + 1; // 1-based
+
+            // Show top 5, then a divider + user's row if they're outside top 5
+            const topRows = top5
               .map((e, i) => {
                 const isMe = e.userId === myId;
                 const rank = medals[i] ?? `${i + 1}`;
@@ -1508,13 +1516,27 @@
               })
               .join("");
 
+            let myRow = "";
+            if (myEntry && myRank > 5) {
+              const rank = medals[myRankIdx] ?? `${myRank}`;
+              myRow = `<tr><td colspan="3" style="border:none;padding:4px 0;"></td></tr>
+                <tr class="lb-me">
+                  <td>${rank}</td>
+                  <td>${myEntry.name}</td>
+                  <td>${fmtTime(myEntry.secs)}</td>
+                </tr>`;
+            }
+
             body.innerHTML = `
               <table class="lb-table">
                 <thead><tr>
                   <th>#</th><th>Name</th><th>Time</th>
                 </tr></thead>
-                <tbody>${rows_html}</tbody>
+                <tbody>${topRows}${myRow}</tbody>
               </table>`;
+
+            // Keep entries as top5 for share section compatibility
+            const entries = top5;
 
             // Show share button if the current user appears in the leaderboard,
             // using their leaderboard time (works even after a page refresh).
@@ -1522,7 +1544,6 @@
             // available, otherwise falls back to whatever was set at completion.
             const shareSection = document.getElementById("lb-share-section");
             if (shareSection) {
-              const myEntry = entries.find((e) => e.userId === myId);
               if (myEntry) {
                 const mins = Math.floor(myEntry.secs / 60);
                 const secs = myEntry.secs % 60;
@@ -2150,6 +2171,6 @@
       <span class="acb-text" id="acb-text"></span>
     </div>
 
-    <div class="version-tag">v1.3.46</div>
+    <div class="version-tag">v1.3.47</div>
   </body>
 </html>
