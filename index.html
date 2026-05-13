@@ -1087,7 +1087,7 @@
         <h2>Leaderboard</h2>
         <div class="lb-header-row">
           <div class="lb-header-spacer"></div>
-          <div class="lb-subtitle">Top 5 fastest times</div>
+          <div class="lb-subtitle">Ten fastest times</div>
           <div class="lb-header-end">
             <button class="lb-refresh" id="lb-refresh" title="Refresh">
               ↻
@@ -1531,8 +1531,8 @@
             const fmtTime = (s) =>
               s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
 
-            // Top 5 entries
-            const top5 = allEntries.slice(0, 5);
+            // Top 10 entries
+            const top5 = allEntries.slice(0, 10);
 
             // Find the current user's rank in the full list
             const myRankIdx = allEntries.findIndex((e) => e.userId === myId);
@@ -1553,7 +1553,7 @@
               .join("");
 
             let myRow = "";
-            if (myEntry && myRank > 5) {
+            if (myEntry && myRank > 10) {
               const rank = medals[myRankIdx] ?? `${myRank}`;
               myRow = `<tr><td colspan="3" style="border:none;padding:4px 0;"></td></tr>
                 <tr class="lb-me">
@@ -2273,6 +2273,6 @@
       <span class="acb-text" id="acb-text"></span>
     </div>
 
-    <div class="version-tag">v1.3.57</div>
+    <div class="version-tag">v1.3.58</div>
   </body>
 </html>
