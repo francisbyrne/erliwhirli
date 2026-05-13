@@ -1713,10 +1713,25 @@
         let activeWord = WORDS[0];
         let activeCellIdx = 0;
         const gridValues = {};
-        let startTime = localStorage.getItem(LS_START_TIME_KEY)
+        // Timer: tracks accumulated ms so time away from the page doesn't count.
+        // LS_START_TIME_KEY stores elapsed ms (not an epoch timestamp).
+        let elapsedMs = localStorage.getItem(LS_START_TIME_KEY)
           ? parseInt(localStorage.getItem(LS_START_TIME_KEY), 10)
-          : null;
+          : 0;
+        let timerRunning = false;
+        let timerSessionStart = null; // when this page-visit's timing began
         let timerInterval = null;
+
+        function getElapsed() {
+          // Total = saved elapsed + current session time (if running)
+          return timerRunning
+            ? elapsedMs + (Date.now() - timerSessionStart)
+            : elapsedMs;
+        }
+
+        function saveElapsed() {
+          localStorage.setItem(LS_START_TIME_KEY, getElapsed());
+        }
 
         function formatElapsed(ms) {
           const totalSecs = Math.floor(ms / 1000);
@@ -1729,29 +1744,43 @@
 
         function tickTimer() {
           const el = document.getElementById("timer-display");
-          if (el && startTime)
-            el.textContent = formatElapsed(Date.now() - startTime);
+          if (el) el.textContent = formatElapsed(getElapsed());
         }
 
         function startTimer() {
-          const corner = document.getElementById("timer-corner");
-          if (corner) corner.classList.add("visible");
+          if (timerRunning) return;
+          timerRunning = true;
+          timerSessionStart = Date.now();
           tickTimer();
           if (!timerInterval) timerInterval = setInterval(tickTimer, 1000);
         }
 
+        function pauseTimer() {
+          if (!timerRunning) return;
+          elapsedMs = getElapsed();
+          timerRunning = false;
+          timerSessionStart = null;
+          saveElapsed();
+        }
+
         function stopTimer() {
+          pauseTimer();
           if (timerInterval) {
             clearInterval(timerInterval);
             timerInterval = null;
           }
         }
 
-        // Start timer immediately on puzzle load (or resume if restored from localStorage)
-        if (!startTime) {
-          startTime = Date.now();
-          localStorage.setItem(LS_START_TIME_KEY, startTime);
-        }
+        // Pause when user navigates away, resume when they come back
+        document.addEventListener("visibilitychange", () => {
+          if (document.hidden) {
+            pauseTimer();
+          } else if (!puzzleDone) {
+            startTimer();
+          }
+        });
+
+        // Start immediately on puzzle load
         startTimer();
         let puzzleDone = false;
         let hasShaken = false;
@@ -2078,12 +2107,12 @@
 
           if (allCorrect) {
             puzzleDone = true;
-            localStorage.removeItem(LS_START_TIME_KEY);
             stopTimer();
+            localStorage.removeItem(LS_START_TIME_KEY);
             const clueBar = document.getElementById("active-clue-bar");
             if (clueBar) clueBar.classList.remove("visible");
             errorEl.classList.remove("show");
-            const secs = Math.round((Date.now() - startTime) / 1000);
+            const secs = Math.round(getElapsed() / 1000);
             const timeStr =
               secs < 60
                 ? `in ${secs} second${secs === 1 ? "" : "s"}`
@@ -2244,6 +2273,6 @@
       <span class="acb-text" id="acb-text"></span>
     </div>
 
-    <div class="version-tag">v1.3.56</div>
+    <div class="version-tag">v1.3.57</div>
   </body>
 </html>
