@@ -1472,8 +1472,14 @@
 
       function showLeaderboard(highlightName) {
         _lbHighlightName = highlightName || null;
+
+        // dismiss mobile keyboard
+        capturePaused = true;
+        capture.blur();
+
         const overlay = document.getElementById("leaderboard-overlay");
         overlay.classList.add("show");
+
         loadLeaderboard();
       }
 
