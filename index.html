@@ -230,6 +230,22 @@
         color: var(--accent);
       }
 
+      /* ── DEBUG OVERLAY (remove when done) ── */
+      #debug-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.85);
+        color: #0f0;
+        font-family: monospace;
+        font-size: 11px;
+        padding: 6px 8px;
+        z-index: 9999;
+        white-space: pre;
+        pointer-events: none;
+      }
+
       /* ── LOADING ── */
       .loading-state {
         display: flex;
@@ -2266,6 +2282,19 @@
         const timer = document.getElementById("timer-corner");
         if (timer)
           timer.style.transform = lift > 0 ? `translateY(-${lift}px)` : "";
+
+        // Debug overlay
+        const dbg = document.getElementById("debug-overlay");
+        if (dbg) {
+          const vv = window.visualViewport;
+          dbg.textContent = [
+            `lift=${lift} | kbH=${_keyboardHeight}`,
+            `innerH=${window.innerHeight} | initH=${_initialInnerHeight}`,
+            `clientH=${document.documentElement.clientHeight}`,
+            `vv.h=${vv?.height?.toFixed(0)} | vv.top=${vv?.offsetTop?.toFixed(0)}`,
+            `ua=${navigator.userAgent.slice(0, 60)}`,
+          ].join("\n");
+        }
       }
 
       function computeAndApplyLift() {
@@ -2279,40 +2308,55 @@
             window.innerHeight - (vv.offsetTop + vv.height),
           );
         }
-        // clientHeight shrinks in many Android WebViews
         lift = Math.max(
           lift,
           _initialInnerHeight - document.documentElement.clientHeight,
         );
-        // innerHeight shrinks in some WebViews
         lift = Math.max(lift, _initialInnerHeight - window.innerHeight);
 
-        applyLift(Math.max(0, lift));
+        return Math.max(0, lift);
       }
 
       // Standard events
       if (window.visualViewport) {
-        window.visualViewport.addEventListener("resize", computeAndApplyLift);
-        window.visualViewport.addEventListener("scroll", computeAndApplyLift);
+        window.visualViewport.addEventListener("resize", () =>
+          applyLift(computeAndApplyLift()),
+        );
+        window.visualViewport.addEventListener("scroll", () =>
+          applyLift(computeAndApplyLift()),
+        );
       }
-      window.addEventListener("resize", computeAndApplyLift);
+      window.addEventListener("resize", () => applyLift(computeAndApplyLift()));
 
-      // WebView fallback: poll while capture input is focused.
-      // Many WebViews (FB Messenger etc.) don't fire ANY resize events —
-      // polling clientHeight is the only reliable detection method.
+      // WebView fallback: on focus, try measured lift first; if nothing fires
+      // after 600ms, fall back to a hardcoded estimate (~40% of screen height).
       let _kbPollInterval = null;
       document.addEventListener("focusin", (e) => {
         if (e.target?.id !== "capture") return;
         if (_kbPollInterval) return;
-        // Poll rapidly at first, then settle
-        _kbPollInterval = setInterval(computeAndApplyLift, 50);
+
+        // Poll rapidly to catch any signal that fires
+        _kbPollInterval = setInterval(() => {
+          const lift = computeAndApplyLift();
+          if (lift > 0) applyLift(lift);
+        }, 50);
+
+        // After 600ms (keyboard fully open), if nothing fired use hardcoded estimate
         setTimeout(() => {
+          if (_kbPollInterval && _keyboardHeight === 0) {
+            applyLift(Math.round(window.innerHeight * 0.42));
+          }
+          // Settle to slower polling
           if (_kbPollInterval) {
             clearInterval(_kbPollInterval);
-            _kbPollInterval = setInterval(computeAndApplyLift, 200);
+            _kbPollInterval = setInterval(() => {
+              const lift = computeAndApplyLift();
+              if (lift > 0) applyLift(lift);
+            }, 300);
           }
-        }, 1000);
+        }, 600);
       });
+
       document.addEventListener("focusout", (e) => {
         if (e.target?.id !== "capture") return;
         setTimeout(() => {
@@ -2332,6 +2376,9 @@
       <span class="acb-text" id="acb-text"></span>
     </div>
 
-    <div class="version-tag">v1.3.66</div>
+    <!-- !! DEBUG ONLY - remove when done !! -->
+    <div id="debug-overlay">waiting...</div>
+    <!-- !! END DEBUG !! -->
+    <div class="version-tag">v1.3.68</div>
   </body>
 </html>
