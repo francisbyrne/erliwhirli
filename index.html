@@ -2279,9 +2279,12 @@
         _keyboardHeight = lift;
         const bar = document.getElementById("active-clue-bar");
         if (bar) bar.style.transform = lift > 0 ? `translateY(-${lift}px)` : "";
+        // Timer sits 18px above bottom normally, so lift it by kbHeight - 18px
+        // to keep it just above the keyboard without overlapping the clue bar
         const timer = document.getElementById("timer-corner");
         if (timer)
-          timer.style.transform = lift > 0 ? `translateY(-${lift}px)` : "";
+          timer.style.transform =
+            lift > 0 ? `translateY(-${Math.max(0, lift - 18)}px)` : "";
 
         // Debug overlay
         const dbg = document.getElementById("debug-overlay");
@@ -2356,7 +2359,7 @@
         // 45% is a reasonable default; stored so future sessions are instant.
         setTimeout(() => {
           if (_keyboardHeight < 50) {
-            const estimate = Math.round(window.innerHeight * 0.4);
+            const estimate = Math.round(window.innerHeight * 0.42);
             applyLift(estimate);
             _lastKnownKbHeight = estimate;
           } else {
@@ -2423,6 +2426,6 @@
     <!-- !! DEBUG ONLY - remove when done !! -->
     <div id="debug-overlay">waiting...</div>
     <!-- !! END DEBUG !! -->
-    <div class="version-tag">v1.3.75</div>
+    <div class="version-tag">v1.3.76</div>
   </body>
 </html>
