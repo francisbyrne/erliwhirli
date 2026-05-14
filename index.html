@@ -2332,17 +2332,42 @@
       // since focusin may not fire in some WebViews (e.g. FB Messenger).
       let _kbPollInterval = null;
 
+      // Cache keyboard height in localStorage so it persists across sessions
+      // and is instant on subsequent taps. Keyed by innerHeight so it adapts
+      // if the user rotates the device or changes font size.
+      const _kbCacheKey = "kb_height_" + window.innerHeight;
+      let _lastKnownKbHeight = parseInt(
+        localStorage.getItem(_kbCacheKey) || "0",
+        10,
+      );
+
       function onKeyboardOpen() {
+        // If we already have a calibrated height, apply immediately
+        if (_lastKnownKbHeight >= 50) {
+          applyLift(_lastKnownKbHeight);
+          return;
+        }
         if (_kbPollInterval) return;
-        // Poll for measured lift
+        // Poll for a measured lift signal
         _kbPollInterval = setInterval(() => {
           const lift = computeAndApplyLift();
-          if (lift > 0) applyLift(lift);
+          if (lift >= 50) {
+            applyLift(lift);
+            _lastKnownKbHeight = lift;
+            localStorage.setItem(_kbCacheKey, lift);
+          }
         }, 50);
-        // After 800ms, if no real signal fired (< 50px), use hardcoded estimate
+        // After 800ms, if no signal fired, use a proportional estimate.
+        // 45% is a reasonable default; stored so future sessions are instant.
         setTimeout(() => {
           if (_keyboardHeight < 50) {
-            applyLift(Math.round(window.innerHeight * 0.42));
+            const estimate = Math.round(window.innerHeight * 0.45);
+            applyLift(estimate);
+            _lastKnownKbHeight = estimate;
+            localStorage.setItem(_kbCacheKey, estimate);
+          } else {
+            _lastKnownKbHeight = _keyboardHeight;
+            localStorage.setItem(_kbCacheKey, _keyboardHeight);
           }
           if (_kbPollInterval) {
             clearInterval(_kbPollInterval);
@@ -2405,6 +2430,6 @@
     <!-- !! DEBUG ONLY - remove when done !! -->
     <div id="debug-overlay">waiting...</div>
     <!-- !! END DEBUG !! -->
-    <div class="version-tag">v1.3.70</div>
+    <div class="version-tag">v1.3.72</div>
   </body>
 </html>
