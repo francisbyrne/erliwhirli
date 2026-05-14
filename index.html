@@ -2235,13 +2235,23 @@
       }
 
       // ── CLUE BAR: track visual viewport so bar stays above keyboard ──
+      // Track the full window height so we can detect keyboard appearing
+      // via window resize — needed for WebViews (e.g. Facebook Messenger)
+      // that don't fire visualViewport events reliably.
+      const _fullWindowHeight = window.innerHeight;
+
+      function getKeyboardLift() {
+        if (window.visualViewport) {
+          // Standard approach: distance keyboard pushes up from bottom
+          const vv = window.visualViewport;
+          return Math.max(0, window.innerHeight - (vv.offsetTop + vv.height));
+        }
+        // Fallback for WebViews: compare current window height to original
+        return Math.max(0, _fullWindowHeight - window.innerHeight);
+      }
+
       function updateClueBarPosition() {
-        if (!window.visualViewport) return;
-        const vv = window.visualViewport;
-        // Distance from bottom of visual viewport to bottom of layout viewport
-        const offsetFromBottom =
-          window.innerHeight - (vv.offsetTop + vv.height);
-        const lift = Math.max(0, offsetFromBottom);
+        const lift = getKeyboardLift();
 
         // Keep clue bar just above the keyboard
         const bar = document.getElementById("active-clue-bar");
@@ -2264,12 +2274,17 @@
         }
       }
 
+      // Visual Viewport API (standard browsers)
       if (window.visualViewport) {
         window.visualViewport.addEventListener("resize", updateClueBarPosition);
         window.visualViewport.addEventListener("scroll", updateClueBarPosition);
         window.visualViewport.addEventListener("resize", updateVictoryOverlay);
         window.visualViewport.addEventListener("scroll", updateVictoryOverlay);
       }
+
+      // window resize fallback for WebViews that shrink innerHeight when
+      // the keyboard opens (e.g. Facebook Messenger, Instagram)
+      window.addEventListener("resize", updateClueBarPosition);
     </script>
     <!-- Active clue bar — visible when keyboard is open on mobile -->
     <div id="active-clue-bar">
@@ -2279,6 +2294,6 @@
       <span class="acb-text" id="acb-text"></span>
     </div>
 
-    <div class="version-tag">v1.3.58</div>
+    <div class="version-tag">v1.3.59</div>
   </body>
 </html>
