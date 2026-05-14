@@ -2328,37 +2328,30 @@
       }
       window.addEventListener("resize", () => applyLift(computeAndApplyLift()));
 
-      // WebView fallback: on focus, try measured lift first; if nothing fires
-      // after 600ms, fall back to a hardcoded estimate (~40% of screen height).
+      // WebView keyboard detection — hooked directly onto capture input
+      // since focusin may not fire in some WebViews (e.g. FB Messenger).
       let _kbPollInterval = null;
-      document.addEventListener("focusin", (e) => {
-        if (e.target?.id !== "capture") return;
-        if (_kbPollInterval) return;
 
-        // Poll rapidly to catch any signal that fires
+      function onKeyboardOpen() {
+        if (_kbPollInterval) return;
+        // Poll for measured lift
         _kbPollInterval = setInterval(() => {
           const lift = computeAndApplyLift();
           if (lift > 0) applyLift(lift);
         }, 50);
-
-        // After 600ms (keyboard fully open), if nothing fired use hardcoded estimate
+        // After 800ms, if no signal fired use hardcoded estimate
         setTimeout(() => {
-          if (_kbPollInterval && _keyboardHeight === 0) {
+          if (_keyboardHeight === 0) {
             applyLift(Math.round(window.innerHeight * 0.42));
           }
-          // Settle to slower polling
           if (_kbPollInterval) {
             clearInterval(_kbPollInterval);
-            _kbPollInterval = setInterval(() => {
-              const lift = computeAndApplyLift();
-              if (lift > 0) applyLift(lift);
-            }, 300);
+            _kbPollInterval = null;
           }
-        }, 600);
-      });
+        }, 800);
+      }
 
-      document.addEventListener("focusout", (e) => {
-        if (e.target?.id !== "capture") return;
+      function onKeyboardClose() {
         setTimeout(() => {
           if (_kbPollInterval) {
             clearInterval(_kbPollInterval);
@@ -2366,6 +2359,39 @@
           }
           applyLift(0);
         }, 300);
+      }
+
+      // Standard focus events
+      document.addEventListener("focusin", (e) => {
+        if (e.target?.id === "capture") onKeyboardOpen();
+      });
+      document.addEventListener("focusout", (e) => {
+        if (e.target?.id === "capture") onKeyboardClose();
+      });
+
+      // Hook directly into capture input events as fallback
+      // (these fire even when focus events don't in some WebViews)
+      document.addEventListener("DOMContentLoaded", () => {
+        const cap = document.getElementById("capture");
+        if (!cap) return;
+        cap.addEventListener("focus", onKeyboardOpen);
+        cap.addEventListener("blur", onKeyboardClose);
+        cap.addEventListener("touchstart", onKeyboardOpen, { passive: true });
+        cap.addEventListener("click", onKeyboardOpen);
+      });
+
+      // Also trigger on any cell click since that's what opens the keyboard
+      document.addEventListener(
+        "touchstart",
+        (e) => {
+          const el = e.target?.closest?.(".cell");
+          if (el && !el.classList.contains("blocked")) onKeyboardOpen();
+        },
+        { passive: true },
+      );
+      document.addEventListener("mousedown", (e) => {
+        const el = e.target?.closest?.(".cell");
+        if (el && !el.classList.contains("blocked")) onKeyboardOpen();
       });
     </script>
     <!-- Active clue bar — fixed above keyboard -->
@@ -2379,6 +2405,6 @@
     <!-- !! DEBUG ONLY - remove when done !! -->
     <div id="debug-overlay">waiting...</div>
     <!-- !! END DEBUG !! -->
-    <div class="version-tag">v1.3.68</div>
+    <div class="version-tag">v1.3.69</div>
   </body>
 </html>
