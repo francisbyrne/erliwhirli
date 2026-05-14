@@ -470,21 +470,18 @@
       /* ── ACTIVE CLUE BAR ── */
       #active-clue-bar {
         display: none;
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        z-index: 90;
+        position: relative;
+        width: 100%;
+        max-width: 310px;
         background: var(--paper);
         border-top: 2px solid var(--ink);
+        border-bottom: 1px solid #d4c9b0;
         padding: 10px 16px;
         flex-direction: row;
         align-items: center;
         gap: 10px;
         min-height: 48px;
-        box-shadow: 0 -2px 12px rgba(26, 16, 8, 0.08);
-        /* bottom is overridden by JS via the Visual Viewport API
-           so the bar always sits just above the on-screen keyboard */
+        margin-top: 16px;
       }
       #active-clue-bar.visible {
         display: flex;
@@ -973,7 +970,7 @@
       // Force reload if the cached version doesn't match the current version.
       // Helps with Facebook Messenger and other WebViews that aggressively cache.
       // SINGLE SOURCE OF TRUTH: update this when deploying a new version.
-      const CURRENT_VERSION = "v1.3.62";
+      const CURRENT_VERSION = "v1.3.63";
       const cachedVersion = sessionStorage.getItem("app_version");
       if (cachedVersion && cachedVersion !== CURRENT_VERSION) {
         sessionStorage.setItem("app_version", CURRENT_VERSION);
@@ -1041,6 +1038,14 @@
 
       <div class="error-msg" id="error-msg">
         ⚠ One or more answers is incorrect — keep going!
+      </div>
+
+      <!-- Active clue bar — inline between grid and clues -->
+      <div id="active-clue-bar">
+        <span class="acb-num" id="acb-num"></span>
+        <span class="acb-dir" id="acb-dir"></span>
+        <div class="acb-sep"></div>
+        <span class="acb-text" id="acb-text"></span>
       </div>
 
       <div class="clues-section">
@@ -2253,59 +2258,6 @@
       }
 
       // ── CLUE BAR: track visual viewport so bar stays above keyboard ──
-      // ── KEYBOARD / CLUE BAR POSITIONING ──
-      // Strategy: use every available signal to detect keyboard height.
-      // WebViews (FB Messenger etc.) may not fire visualViewport events,
-      // so we also poll while the capture input is focused.
-      const _initialHeight = window.innerHeight;
-      let _pollInterval = null;
-
-      function getKeyboardLift() {
-        // Best signal: visualViewport vs layout viewport
-        if (window.visualViewport) {
-          const vv = window.visualViewport;
-          const lift = window.innerHeight - (vv.offsetTop + vv.height);
-          if (lift > 10) return lift;
-        }
-        // Fallback: window shrank (some Android WebViews)
-        const shrink = _initialHeight - window.innerHeight;
-        if (shrink > 10) return shrink;
-        return 0;
-      }
-
-      function updateClueBarPosition() {
-        const lift = getKeyboardLift();
-        const bar = document.getElementById("active-clue-bar");
-        if (bar) bar.style.bottom = lift + "px";
-        const timer = document.getElementById("timer-corner");
-        if (timer) timer.style.bottom = (lift > 0 ? lift + 58 : 18) + "px";
-      }
-
-      function startPolling() {
-        if (_pollInterval) return;
-        _pollInterval = setInterval(updateClueBarPosition, 100);
-      }
-
-      function stopPolling() {
-        if (_pollInterval) {
-          clearInterval(_pollInterval);
-          _pollInterval = null;
-        }
-        updateClueBarPosition(); // final update when keyboard dismisses
-      }
-
-      // Wire up polling to the capture input focus state
-      // (capture input is the keyboard trigger for the grid)
-      document.addEventListener("focusin", (e) => {
-        if (e.target && e.target.id === "capture") startPolling();
-      });
-      document.addEventListener("focusout", (e) => {
-        if (e.target && e.target.id === "capture") {
-          // Small delay — keyboard takes time to animate away
-          setTimeout(stopPolling, 300);
-        }
-      });
-
       function updateVictoryOverlay() {
         const overlay = document.getElementById("victory-overlay");
         if (!overlay || !overlay.classList.contains("show")) return;
@@ -2318,23 +2270,30 @@
         }
       }
 
-      // Standard events (work in Chrome, Safari etc.)
       if (window.visualViewport) {
-        window.visualViewport.addEventListener("resize", updateClueBarPosition);
-        window.visualViewport.addEventListener("scroll", updateClueBarPosition);
         window.visualViewport.addEventListener("resize", updateVictoryOverlay);
         window.visualViewport.addEventListener("scroll", updateVictoryOverlay);
       }
-      window.addEventListener("resize", updateClueBarPosition);
-    </script>
-    <!-- Active clue bar — visible when keyboard is open on mobile -->
-    <div id="active-clue-bar">
-      <span class="acb-num" id="acb-num"></span>
-      <span class="acb-dir" id="acb-dir"></span>
-      <div class="acb-sep"></div>
-      <span class="acb-text" id="acb-text"></span>
-    </div>
 
+      // Keep timer above keyboard
+      function updateTimerPosition() {
+        const timer = document.getElementById("timer-corner");
+        if (!timer) return;
+        if (window.visualViewport) {
+          const vv = window.visualViewport;
+          const lift = Math.max(
+            0,
+            window.innerHeight - (vv.offsetTop + vv.height),
+          );
+          timer.style.bottom = (lift > 0 ? lift + 8 : 18) + "px";
+        }
+      }
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", updateTimerPosition);
+        window.visualViewport.addEventListener("scroll", updateTimerPosition);
+      }
+      window.addEventListener("resize", updateTimerPosition);
+    </script>
     <div class="version-tag"></div>
   </body>
 </html>
