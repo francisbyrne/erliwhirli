@@ -85,8 +85,10 @@
         padding: 5px 10px;
         border-radius: 3px;
         border-bottom: 1.5px solid #c9b99a;
+        background: var(--paper);
         opacity: 1;
         pointer-events: none;
+        transition: transform 0.1s ease;
       }
       #timer-corner .tm-label {
         font-family: "Source Serif 4", serif;
@@ -470,18 +472,20 @@
       /* ── ACTIVE CLUE BAR ── */
       #active-clue-bar {
         display: none;
-        position: relative;
-        width: 100%;
-        max-width: 310px;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 90;
         background: var(--paper);
         border-top: 2px solid var(--ink);
-        border-bottom: 1px solid #d4c9b0;
         padding: 10px 16px;
         flex-direction: row;
         align-items: center;
         gap: 10px;
         min-height: 48px;
-        margin-top: 16px;
+        box-shadow: 0 -2px 12px rgba(26, 16, 8, 0.08);
+        transition: transform 0.1s ease;
       }
       #active-clue-bar.visible {
         display: flex;
@@ -1020,14 +1024,6 @@
 
       <div class="error-msg" id="error-msg">
         ⚠ One or more answers is incorrect — keep going!
-      </div>
-
-      <!-- Active clue bar — inline between grid and clues -->
-      <div id="active-clue-bar">
-        <span class="acb-num" id="acb-num"></span>
-        <span class="acb-dir" id="acb-dir"></span>
-        <div class="acb-sep"></div>
-        <span class="acb-text" id="acb-text"></span>
       </div>
 
       <div class="clues-section">
@@ -2257,25 +2253,70 @@
         window.visualViewport.addEventListener("scroll", updateVictoryOverlay);
       }
 
-      // Keep timer above keyboard
-      function updateTimerPosition() {
+      // ── KEYBOARD LIFT FOR CLUE BAR & TIMER ──
+      // Uses every available signal; works in standard browsers AND WebViews
+      // (FB Messenger, Instagram) where visualViewport may not fire.
+      const _initialInnerHeight = window.innerHeight;
+      let _keyboardHeight = 0;
+
+      function applyLift(lift) {
+        _keyboardHeight = lift;
+        const bar = document.getElementById("active-clue-bar");
+        if (bar) bar.style.transform = lift > 0 ? `translateY(-${lift}px)` : "";
         const timer = document.getElementById("timer-corner");
-        if (!timer) return;
+        if (timer)
+          timer.style.transform = lift > 0 ? `translateY(-${lift}px)` : "";
+      }
+
+      function computeAndApplyLift() {
         if (window.visualViewport) {
           const vv = window.visualViewport;
           const lift = Math.max(
             0,
             window.innerHeight - (vv.offsetTop + vv.height),
           );
-          timer.style.bottom = (lift > 0 ? lift + 8 : 18) + "px";
+          applyLift(lift);
+          return;
         }
+        // Fallback: innerHeight shrank
+        const lift = Math.max(0, _initialInnerHeight - window.innerHeight);
+        applyLift(lift);
       }
+
+      // Standard events
       if (window.visualViewport) {
-        window.visualViewport.addEventListener("resize", updateTimerPosition);
-        window.visualViewport.addEventListener("scroll", updateTimerPosition);
+        window.visualViewport.addEventListener("resize", computeAndApplyLift);
+        window.visualViewport.addEventListener("scroll", computeAndApplyLift);
       }
-      window.addEventListener("resize", updateTimerPosition);
+      window.addEventListener("resize", computeAndApplyLift);
+
+      // WebView fallback: poll while capture input is focused
+      // (FB Messenger WebView may not fire any resize/viewport events)
+      let _kbPollInterval = null;
+      document.addEventListener("focusin", (e) => {
+        if (e.target?.id !== "capture") return;
+        if (_kbPollInterval) return;
+        _kbPollInterval = setInterval(computeAndApplyLift, 100);
+      });
+      document.addEventListener("focusout", (e) => {
+        if (e.target?.id !== "capture") return;
+        setTimeout(() => {
+          if (_kbPollInterval) {
+            clearInterval(_kbPollInterval);
+            _kbPollInterval = null;
+          }
+          applyLift(0);
+        }, 300);
+      });
     </script>
-    <div class="version-tag">v1.3.63</div>
+    <!-- Active clue bar — fixed above keyboard -->
+    <div id="active-clue-bar">
+      <span class="acb-num" id="acb-num"></span>
+      <span class="acb-dir" id="acb-dir"></span>
+      <div class="acb-sep"></div>
+      <span class="acb-text" id="acb-text"></span>
+    </div>
+
+    <div class="version-tag">v1.3.65</div>
   </body>
 </html>
