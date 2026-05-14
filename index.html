@@ -2235,32 +2235,58 @@
       }
 
       // ── CLUE BAR: track visual viewport so bar stays above keyboard ──
-      // Track the full window height so we can detect keyboard appearing
-      // via window resize — needed for WebViews (e.g. Facebook Messenger)
-      // that don't fire visualViewport events reliably.
-      const _fullWindowHeight = window.innerHeight;
+      // ── KEYBOARD / CLUE BAR POSITIONING ──
+      // Strategy: use every available signal to detect keyboard height.
+      // WebViews (FB Messenger etc.) may not fire visualViewport events,
+      // so we also poll while the capture input is focused.
+      const _initialHeight = window.innerHeight;
+      let _pollInterval = null;
 
       function getKeyboardLift() {
+        // Best signal: visualViewport vs layout viewport
         if (window.visualViewport) {
-          // Standard approach: distance keyboard pushes up from bottom
           const vv = window.visualViewport;
-          return Math.max(0, window.innerHeight - (vv.offsetTop + vv.height));
+          const lift = window.innerHeight - (vv.offsetTop + vv.height);
+          if (lift > 10) return lift;
         }
-        // Fallback for WebViews: compare current window height to original
-        return Math.max(0, _fullWindowHeight - window.innerHeight);
+        // Fallback: window shrank (some Android WebViews)
+        const shrink = _initialHeight - window.innerHeight;
+        if (shrink > 10) return shrink;
+        return 0;
       }
 
       function updateClueBarPosition() {
         const lift = getKeyboardLift();
-
-        // Keep clue bar just above the keyboard
         const bar = document.getElementById("active-clue-bar");
         if (bar) bar.style.bottom = lift + "px";
-
-        // Keep timer just above the keyboard (plus a small gap)
         const timer = document.getElementById("timer-corner");
         if (timer) timer.style.bottom = (lift > 0 ? lift + 58 : 18) + "px";
       }
+
+      function startPolling() {
+        if (_pollInterval) return;
+        _pollInterval = setInterval(updateClueBarPosition, 100);
+      }
+
+      function stopPolling() {
+        if (_pollInterval) {
+          clearInterval(_pollInterval);
+          _pollInterval = null;
+        }
+        updateClueBarPosition(); // final update when keyboard dismisses
+      }
+
+      // Wire up polling to the capture input focus state
+      // (capture input is the keyboard trigger for the grid)
+      document.addEventListener("focusin", (e) => {
+        if (e.target && e.target.id === "capture") startPolling();
+      });
+      document.addEventListener("focusout", (e) => {
+        if (e.target && e.target.id === "capture") {
+          // Small delay — keyboard takes time to animate away
+          setTimeout(stopPolling, 300);
+        }
+      });
 
       function updateVictoryOverlay() {
         const overlay = document.getElementById("victory-overlay");
@@ -2274,16 +2300,13 @@
         }
       }
 
-      // Visual Viewport API (standard browsers)
+      // Standard events (work in Chrome, Safari etc.)
       if (window.visualViewport) {
         window.visualViewport.addEventListener("resize", updateClueBarPosition);
         window.visualViewport.addEventListener("scroll", updateClueBarPosition);
         window.visualViewport.addEventListener("resize", updateVictoryOverlay);
         window.visualViewport.addEventListener("scroll", updateVictoryOverlay);
       }
-
-      // window resize fallback for WebViews that shrink innerHeight when
-      // the keyboard opens (e.g. Facebook Messenger, Instagram)
       window.addEventListener("resize", updateClueBarPosition);
     </script>
     <!-- Active clue bar — visible when keyboard is open on mobile -->
@@ -2294,6 +2317,6 @@
       <span class="acb-text" id="acb-text"></span>
     </div>
 
-    <div class="version-tag">v1.3.59</div>
+    <div class="version-tag">v1.3.60</div>
   </body>
 </html>
