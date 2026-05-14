@@ -2269,18 +2269,25 @@
       }
 
       function computeAndApplyLift() {
+        // Try every signal we know about
+        let lift = 0;
+
         if (window.visualViewport) {
           const vv = window.visualViewport;
-          const lift = Math.max(
-            0,
+          lift = Math.max(
+            lift,
             window.innerHeight - (vv.offsetTop + vv.height),
           );
-          applyLift(lift);
-          return;
         }
-        // Fallback: innerHeight shrank
-        const lift = Math.max(0, _initialInnerHeight - window.innerHeight);
-        applyLift(lift);
+        // clientHeight shrinks in many Android WebViews
+        lift = Math.max(
+          lift,
+          _initialInnerHeight - document.documentElement.clientHeight,
+        );
+        // innerHeight shrinks in some WebViews
+        lift = Math.max(lift, _initialInnerHeight - window.innerHeight);
+
+        applyLift(Math.max(0, lift));
       }
 
       // Standard events
@@ -2290,13 +2297,21 @@
       }
       window.addEventListener("resize", computeAndApplyLift);
 
-      // WebView fallback: poll while capture input is focused
-      // (FB Messenger WebView may not fire any resize/viewport events)
+      // WebView fallback: poll while capture input is focused.
+      // Many WebViews (FB Messenger etc.) don't fire ANY resize events —
+      // polling clientHeight is the only reliable detection method.
       let _kbPollInterval = null;
       document.addEventListener("focusin", (e) => {
         if (e.target?.id !== "capture") return;
         if (_kbPollInterval) return;
-        _kbPollInterval = setInterval(computeAndApplyLift, 100);
+        // Poll rapidly at first, then settle
+        _kbPollInterval = setInterval(computeAndApplyLift, 50);
+        setTimeout(() => {
+          if (_kbPollInterval) {
+            clearInterval(_kbPollInterval);
+            _kbPollInterval = setInterval(computeAndApplyLift, 200);
+          }
+        }, 1000);
       });
       document.addEventListener("focusout", (e) => {
         if (e.target?.id !== "capture") return;
@@ -2317,6 +2332,6 @@
       <span class="acb-text" id="acb-text"></span>
     </div>
 
-    <div class="version-tag">v1.3.65</div>
+    <div class="version-tag">v1.3.66</div>
   </body>
 </html>
