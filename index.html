@@ -966,24 +966,6 @@
     </style>
 
     <script src="settings.js"></script>
-    <script>
-      // Force reload if the cached version doesn't match the current version.
-      // Helps with Facebook Messenger and other WebViews that aggressively cache.
-      // SINGLE SOURCE OF TRUTH: update this when deploying a new version.
-      const CURRENT_VERSION = "v1.3.63";
-      const cachedVersion = sessionStorage.getItem("app_version");
-      if (cachedVersion && cachedVersion !== CURRENT_VERSION) {
-        sessionStorage.setItem("app_version", CURRENT_VERSION);
-        window.location.reload(true);
-      } else {
-        sessionStorage.setItem("app_version", CURRENT_VERSION);
-      }
-      // Set the version tag in the UI from the same constant
-      document.addEventListener("DOMContentLoaded", () => {
-        const tag = document.querySelector(".version-tag");
-        if (tag) tag.textContent = CURRENT_VERSION;
-      });
-    </script>
   </head>
   <body>
     <!-- Player name corner badge -->
@@ -2294,6 +2276,6 @@
       }
       window.addEventListener("resize", updateTimerPosition);
     </script>
-    <div class="version-tag"></div>
+    <div class="version-tag">v1.3.63</div>
   </body>
 </html>
