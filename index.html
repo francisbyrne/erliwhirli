@@ -75,48 +75,31 @@
 
       /* ── TIMER (bottom-right) ── */
       #timer-corner {
-        position: fixed;
-        bottom: 18px;
-        right: 18px;
-        display: flex;
+        display: none;
         align-items: center;
-        gap: 6px;
-        z-index: 95;
-        padding: 5px 10px;
-        border-radius: 3px;
-        border-bottom: 1.5px solid #c9b99a;
-        background: var(--paper);
-        opacity: 1;
-        pointer-events: none;
+        gap: 4px;
+        flex-shrink: 0;
+        padding-left: 10px;
+        border-left: 1px solid #c9b99a;
+        margin-left: auto;
+      }
+      #timer-corner.visible {
+        display: flex;
       }
       #timer-corner .tm-label {
         font-family: "Source Serif 4", serif;
-        font-size: 0.78rem;
+        font-size: 0.72rem;
         letter-spacing: 0.12em;
         color: #8a7060;
         text-transform: uppercase;
       }
       #timer-corner .tm-value {
         font-family: "Playfair Display", serif;
-        font-size: 0.95rem;
+        font-size: 0.88rem;
         color: var(--ink);
         min-width: 3.2ch;
         text-align: right;
         font-variant-numeric: tabular-nums;
-      }
-      @media (max-width: 480px) {
-        #timer-corner {
-          bottom: 12px;
-          right: 12px;
-          padding: 4px 8px;
-          background: var(--paper);
-        }
-        #timer-corner .tm-label {
-          font-size: 0.72rem;
-        }
-        #timer-corner .tm-value {
-          font-size: 0.88rem;
-        }
       }
 
       /* ── PLAYER NAME (top-right) ── */
@@ -1029,6 +1012,10 @@
         <span class="acb-dir" id="acb-dir"></span>
         <div class="acb-sep"></div>
         <span class="acb-text" id="acb-text"></span>
+        <div id="timer-corner">
+          <span class="tm-label">Time</span>
+          <span class="tm-value" id="timer-display">0:00</span>
+        </div>
       </div>
 
       <div class="clues-section">
@@ -1134,11 +1121,6 @@
         </div>
         <div class="name-error" id="modal-name-error"></div>
       </div>
-    </div>
-
-    <div id="timer-corner">
-      <span class="tm-label">Time</span>
-      <span class="tm-value" id="timer-display">0:00</span>
     </div>
 
     <script>
@@ -1763,6 +1745,11 @@
           if (timerRunning) return;
           timerRunning = true;
           timerSessionStart = Date.now();
+          // Show timer (lives inside clue bar, show both)
+          const corner = document.getElementById("timer-corner");
+          if (corner) corner.classList.add("visible");
+          const bar = document.getElementById("active-clue-bar");
+          if (bar) bar.classList.add("visible");
           tickTimer();
           if (!timerInterval) timerInterval = setInterval(tickTimer, 1000);
         }
@@ -2028,7 +2015,19 @@
               word.dir === "across" ? "→ Across" : "↓ Down";
             document.getElementById("acb-text").textContent = word.clue;
             bar.classList.add("visible");
-            bar.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            // Scroll so the clue bar is visible above the keyboard.
+            // Use getBoundingClientRect + scrollTo for reliable WebView support.
+            setTimeout(() => {
+              const rect = bar.getBoundingClientRect();
+              const viewH = window.visualViewport
+                ? window.visualViewport.height
+                : window.innerHeight;
+              // If bar bottom is below the visible area, scroll it into view
+              if (rect.bottom > viewH - 10) {
+                const scrollTarget = window.scrollY + rect.bottom - viewH + 16;
+                window.scrollTo({ top: scrollTarget, behavior: "smooth" });
+              }
+            }, 100);
           }
         }
 
@@ -2258,26 +2257,7 @@
         window.visualViewport.addEventListener("resize", updateVictoryOverlay);
         window.visualViewport.addEventListener("scroll", updateVictoryOverlay);
       }
-
-      // Keep timer above keyboard using Visual Viewport API where supported
-      function updateTimerPosition() {
-        const timer = document.getElementById("timer-corner");
-        if (!timer) return;
-        if (window.visualViewport) {
-          const vv = window.visualViewport;
-          const lift = Math.max(
-            0,
-            window.innerHeight - (vv.offsetTop + vv.height),
-          );
-          timer.style.bottom = (lift > 0 ? lift + 8 : 18) + "px";
-        }
-      }
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener("resize", updateTimerPosition);
-        window.visualViewport.addEventListener("scroll", updateTimerPosition);
-      }
-      window.addEventListener("resize", updateTimerPosition);
     </script>
-    <div class="version-tag">v1.3.79</div>
+    <div class="version-tag">v1.3.81</div>
   </body>
 </html>
