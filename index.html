@@ -1144,12 +1144,10 @@
     </div>
 
     <script>
-      // ─── SHARED STATE ─────────────────────────────────────────────────────────────
       // Controls whether per-cell inputs should refocus when activated.
       // Set to true whenever a name text field should hold focus.
       let capturePaused = false;
 
-      // ─── PLAYER NAME ──────────────────────────────────────────────────────────────
       const APP_URL = "https://erly.lol/"; // ← change this if the URL ever moves
       const LS_KEY = "crossword_player_name";
       const LS_USER_ID_KEY = "crossword_user_id";
@@ -1402,12 +1400,12 @@
         console.error("Puzzle load error:", err);
       }
 
-      // ─── INIT ─────────────────────────────────────────────────────────────────────
-      // Pull the environment variables in from a settings file
-      const { sheetId, sheetGid, leaderboardGid, leaderboardPostUrl } =
-        window.CROSSWORD_SETTINGS;
-
       // ─── LEADERBOARD ──────────────────────────────────────────────────────────────
+      const sheetId = "1WnNEgj1pwetAm6Cu2ZCyIJfAoldQFqOiTPHb914qkhs";
+      const sheetGid = "0";
+      const leaderboardGid = "1934708003";
+      const leaderboardPostUrl =
+        "https://script.google.com/macros/s/AKfycbx_q9qjeMzP-PdLxb0mIB2InjvIA3ZpPjTOj8dLWFUcLetK4tO4kZBHWS43wbAnoHdMoA/exec";
 
       // Submit a score via JSONP (avoids CORS issues with Apps Script).
       // Returns a Promise that resolves true/false once the sheet confirms.
