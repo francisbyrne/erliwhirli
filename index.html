@@ -69,11 +69,11 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 40px 20px 60px;
+        padding: 20px 20px 100px;
         position: relative;
       }
 
-      /* ── TIMER (bottom-right) ── */
+      /* ── TIMER ── */
       #timer-corner {
         display: none;
         align-items: center;
@@ -93,19 +93,16 @@
 
       /* ── PLAYER NAME (top-right) ── */
       #player-name-corner {
-        position: fixed;
-        top: 14px;
-        right: 18px;
         display: flex;
         align-items: center;
         gap: 6px;
         cursor: pointer;
-        z-index: 50;
         padding: 4px 8px;
         border-radius: 3px;
         transition: background 0.15s;
-        /* subtle dashed underline to hint editability */
         border-bottom: 1.5px dashed #c9b99a;
+        align-self: flex-end;
+        margin-bottom: 4px;
       }
       #player-name-corner:hover {
         background: rgba(181, 69, 27, 0.07);
@@ -138,7 +135,9 @@
       header {
         text-align: center;
         margin-bottom: 14px;
-        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       }
       header h1 {
         font-family: "Playfair Display", Georgia, serif;
@@ -971,14 +970,12 @@
     </style>
   </head>
   <body>
-    <!-- Player name corner badge -->
-    <div id="player-name-corner" style="display: none" title="Edit your name">
-      <span class="pn-label">Playing as</span>
-      <span class="pn-name" id="pn-name-text"></span>
-      <span class="pn-edit-icon">✎</span>
-    </div>
-
     <header>
+      <div id="player-name-corner" style="display: none" title="Edit your name">
+        <span class="pn-label">Playing as</span>
+        <span class="pn-name" id="pn-name-text"></span>
+        <span class="pn-edit-icon">✎</span>
+      </div>
       <h1>Erly Whirly Thirsdly Mini</h1>
       <div class="byline">Thursday's Mini Crossword</div>
       <button id="header-leaderboard-btn">⟑ Leaderboard</button>
@@ -2273,6 +2270,6 @@
         window.visualViewport.addEventListener("scroll", updateVictoryOverlay);
       }
     </script>
-    <div class="version-tag">v1.3.93</div>
+    <div class="version-tag">v1.3.94</div>
   </body>
 </html>
